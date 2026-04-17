@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VGR Konstskylt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="header-logo-mark"></div>
+      <span class="header-title">VGR Konstskylt</span>
+    </div>
+    <div class="header-actions">
+      <button id="btn-generate" class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Generera PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- ── App body ── -->
+  <div class="app-body">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label-row">
+          <label class="sidebar-label" for="vg-input">VG-nummer</label>
+          <div class="sidebar-label-actions">
+            <button id="btn-file" class="icon-btn" title="Öppna fil">📂</button>
+            <button id="btn-clipboard" class="icon-btn" title="Klistra in från urklipp">📋</button>
+          </div>
+        </div>
+
+        <textarea
+          id="vg-input"
+          class="vg-textarea"
+          placeholder="VG1234&#10;VG5678&#10;1234"
+          spellcheck="false"
+        ></textarea>
+
+        <input type="file" id="file-input" accept=".txt,.csv" style="display:none">
+
+        <div id="progress-wrap" class="progress-wrap" style="display:none">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+
+        <button id="btn-fetch" class="btn btn-primary btn-block">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+          Hämta data
+        </button>
+        <button id="btn-add-manual" class="btn btn-ghost btn-block">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Lägg till manuellt
+        </button>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section sidebar-info">
+        <p class="sidebar-hint">Avery C32010 · 85×54 mm · 2×5 per A4</p>
+        <p class="sidebar-hint">Klicka en skylt för att redigera direkt.</p>
+      </div>
+    </aside>
+
+    <!-- ── Main content ── -->
+    <main class="main-area">
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <span id="list-label" class="toolbar-count">0 konstverk</span>
+        <div class="toolbar-right">
+          <div class="search-wrap">
+            <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="search-input" class="search-input" type="search" placeholder="Sök…">
+          </div>
+          <button id="btn-clear" class="btn btn-danger-ghost">Rensa lista</button>
+        </div>
+      </div>
+
+      <!-- WYSIWYG page viewport -->
+      <div id="page-viewport" class="page-viewport">
+        <div id="page-scaler" class="page-scaler"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Floating edit popover ── -->
+  <div id="edit-popover" class="edit-popover" style="display:none">
+    <div class="popover-header">
+      <span id="pop-vg-id" class="pop-vg-badge"></span>
+      <button id="pop-close" class="pop-close">×</button>
+    </div>
+    <div class="popover-body">
+      <label>Konstnär<input id="pop-creator" type="text"></label>
+      <label>Konstverksnamn<input id="pop-title" type="text"></label>
+      <label>Konsttyp<input id="pop-artform" type="text"></label>
+      <label>År<input id="pop-year" type="text"></label>
+      <label>VG-nummer<input id="pop-id" type="text"></label>
+    </div>
+  </div>
+
+  <!-- ── Context menu ── -->
+  <ul id="ctx-menu" class="ctx-menu" style="display:none">
+    <li class="ctx-item" data-action="undo">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+      Ångra
+    </li>
+    <li class="ctx-item" data-action="edit">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Redigera
+    </li>
+    <li class="ctx-divider"></li>
+    <li class="ctx-item" data-action="move-up">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      Flytta upp
+    </li>
+    <li class="ctx-item" data-action="move-down">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+      Flytta ned
+    </li>
+    <li class="ctx-divider"></li>
+    <li id="ctx-merge" class="ctx-item" data-action="merge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      Slå ihop valda
+    </li>
+    <li id="ctx-split" class="ctx-item" data-action="split">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="12" x2="3" y2="12"/><polyline points="9 18 3 12 9 6"/><polyline points="15 6 21 12 15 18"/></svg>
+      Dela upp
+    </li>
+    <li class="ctx-divider"></li>
+    <li class="ctx-item ctx-item--danger" data-action="delete">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      Ta bort
+    </li>
+  </ul>
+
+  <!-- ── Edit Modal (for manual add) ── -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Redigera konstverk</h3>
+        <button id="modal-close" class="modal-close-btn" aria-label="Stäng">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+      <div class="modal-footer">
+        <button id="modal-reset" class="btn btn-ghost">Återställ</button>
+        <button id="modal-save"  class="btn btn-primary">Spara</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Merge bar (visas när 2+ konstverk är valda) ── -->
+  <div id="merge-bar" class="merge-bar">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span id="merge-bar-count">2 konstverk valda</span>
+    <button id="merge-bar-btn" class="btn btn-primary btn-sm">Slå ihop</button>
+    <button id="merge-bar-cancel" class="btn btn-ghost btn-sm">Avbryt</button>
+  </div>
+
+  <!-- ── Toast container ── -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
