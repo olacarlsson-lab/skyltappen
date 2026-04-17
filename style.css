@@ -435,10 +435,10 @@ body {
   display: block;
   flex-shrink: 0;
   object-fit: contain;
-  /* Logotypbilden har 24.7% tomt utrymme undertill (112/454 px).
-     padding-bottom kompenserar så att logotypens synliga nederkant
-     linjerar med VG-numrets baslinje. */
-  padding-bottom: 2.7mm;
+  /* Logotypbilden har tomt utrymme undertill.
+     margin-bottom kompenserar så att logotypens textdel
+     linjerar med VG-numrets baslinje i preview (ca 135/454 px). */
+  margin-bottom: -3.3mm;
 }
 
 /* Slot position badge (top-left corner, tiny) */

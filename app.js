@@ -880,10 +880,10 @@ async function buildPDF() {
       const logoH  = 11 * MM;
       const dims   = logoImg.scale(1);
       const logoW  = logoH * (dims.width / dims.height);
-      // Bilden har ~25% tomt utrymme både över och under det synliga märket.
-      // Vi placerar bilden så att märkets nederkant linjerar med bottomY.
-      // bottomWhitespace = (112/454) * logoH
-      const bottomWS = (112 / dims.height) * logoH;
+      // Bilden har ~30% tomt utrymme under textens baslinje (135/454 px).
+      // Vi placerar bilden så att texten linjerar med bottomY.
+      // bottomWhitespace = (135/454) * logoH
+      const bottomWS = (135 / dims.height) * logoH;
       page.drawImage(logoImg, {
         x: cardX + AVERY.cardW - PAD_RIGHT - logoW,
         y: bottomY - bottomWS,
