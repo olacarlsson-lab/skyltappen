@@ -395,6 +395,10 @@ function createLabelEl(slot, aw) {
       e.stopPropagation();
       selectSlot(slot, el, e);
     });
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      openPopover(slot, el);
+    });
 
     el.addEventListener('contextmenu', e => showCtxMenu(e, slot));
 
@@ -465,18 +469,14 @@ function selectSlot(slot, el, event = null) {
     closePopover(/*keepSelection*/ true);
     selectedSlot = null;
   } else {
-    // Vanligt klick — välj en, öppna popover
-    if (selectedSlot === slot && selected.size === 1) {
-      $('pop-creator')?.focus();
-      return;
-    }
+    // Vanligt klick — välj bara, öppna inte popover
     document.querySelectorAll('.label-slot.selected')
       .forEach(x => x.classList.remove('selected'));
     selected.clear();
     selected.add(slot);
     selectedSlot = slot;
     el.classList.add('selected');
-    openPopover(slot, el);
+    closePopover(/*keepSelection*/ true);
   }
 
   updateMergeBar();
