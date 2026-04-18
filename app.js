@@ -991,10 +991,11 @@ function handleKeydown(e) {
     }
   }
 
-  // Alt+↑/↓ — flytta vald skylt
-  if (!inField && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && selectedSlot !== null) {
+  // Alt+pilar — flytta vald skylt (↑/↓ = en rad = 2 steg, ←/→ = ett steg)
+  if (!inField && e.altKey && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && selectedSlot !== null) {
     e.preventDefault();
-    const dir = e.key === 'ArrowUp' ? -1 : 1;
+    const step = (e.key === 'ArrowUp' || e.key === 'ArrowDown') ? 2 : 1;
+    const dir  = (e.key === 'ArrowUp' || e.key === 'ArrowLeft') ? -step : step;
     const newSlot = selectedSlot + dir;
     if (newSlot >= 0 && newSlot < artworks.length) {
       pushHistory();
