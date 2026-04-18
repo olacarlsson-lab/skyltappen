@@ -39,6 +39,7 @@ let history    = [];          // Undo-stack (JSON-snapshots)
 let searchTerm = '';
 let logoBytes  = null;        // Uint8Array med PNG-data
 let editingIdx = -1;
+let addingNew  = false;       // true när modal öppnades via "Lägg till manuellt"
 
 // WYSIWYG state
 let selectedSlot = null;  // global slot index of selected label
@@ -102,10 +103,29 @@ function loadSession() {
   } catch { }
 }
 
+// ── Användarinställningar ─────────────────────────────────────────────────────
+const DEFAULT_SETTINGS = {
+  confirmClear:     true,
+  autoFetchOnPaste: false,
+  maxUndo:          20,
+  minFontScale:     0.60,
+};
+let settings = { ...DEFAULT_SETTINGS };
+
+function loadSettings() {
+  try {
+    const d = localStorage.getItem('vgr_konstskylt_settings');
+    if (d) settings = { ...DEFAULT_SETTINGS, ...JSON.parse(d) };
+  } catch { }
+}
+function saveSettings() {
+  try { localStorage.setItem('vgr_konstskylt_settings', JSON.stringify(settings)); } catch { }
+}
+
 // ── Undo ──────────────────────────────────────────────────────────────────────
 function pushHistory() {
   history.push(JSON.stringify(artworks));
-  if (history.length > 20) history.shift();
+  while (history.length > settings.maxUndo) history.shift();
 }
 function undo() {
   if (!history.length) return;
@@ -335,7 +355,9 @@ function createLabelEl(slot, aw) {
         el.classList.add('drag-over');
       }
     });
-    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    el.addEventListener('dragleave', e => {
+      if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over');
+    });
     el.addEventListener('dragend', () => {
       el.classList.remove('dragging');
       document.querySelectorAll('.label-slot.drag-over')
@@ -346,13 +368,19 @@ function createLabelEl(slot, aw) {
       e.preventDefault();
       if (dragSrc === null || dragSrc === slot) return;
       pushHistory();
+      const insertAt = slot > dragSrc ? slot - 1 : slot;
       const [item] = artworks.splice(dragSrc, 1);
-      artworks.splice(slot > dragSrc ? slot - 1 : slot, 0, item);
+      artworks.splice(insertAt, 0, item);
       selectedSlot = null;
       renderPages();
       closePopover();
       saveSession();
       dragSrc = null;
+      const landEl = document.querySelector(`.label-slot[data-slot="${insertAt}"]`);
+      if (landEl) {
+        landEl.classList.add('just-dropped');
+        landEl.addEventListener('animationend', () => landEl.classList.remove('just-dropped'), { once: true });
+      }
     });
   } else {
     el.textContent = '+';
@@ -559,16 +587,42 @@ function openEdit(idx) {
 }
 
 function closeModal() {
-  $('modal-overlay').classList.remove('open');
+  if (addingNew && editingIdx >= 0 && editingIdx < artworks.length) {
+    artworks.splice(editingIdx, 1);
+    selected.clear();
+    renderPages();
+    saveSession();
+  }
+  addingNew  = false;
   editingIdx = -1;
+  $('modal-overlay').classList.remove('open');
 }
 
 function saveModal() {
   if (editingIdx < 0) return;
-  pushHistory();
+
+  const fields = {};
   document.querySelectorAll('#modal-body input').forEach(inp => {
-    artworks[editingIdx][inp.dataset.key] = inp.value.trim();
+    fields[inp.dataset.key] = inp.value.trim();
   });
+
+  if (addingNew) {
+    const hasContent = Object.values(fields).some(v => v !== '');
+    if (!hasContent) {
+      showToast('Fyll i minst ett fält för att lägga till ett konstverk.', 'error');
+      return;
+    }
+    artworks.splice(editingIdx, 1);   // ta bort sentineln
+    pushHistory();                     // snapshot utan den tomma posten
+    artworks.push(fields);
+    addingNew = false;
+  } else {
+    pushHistory();
+    Object.entries(fields).forEach(([key, val]) => {
+      artworks[editingIdx][key] = val;
+    });
+  }
+
   closeModal();
   renderPages();
   saveSession();
@@ -577,7 +631,7 @@ function saveModal() {
 
 // ── Åtgärder ──────────────────────────────────────────────────────────────────
 function addManual() {
-  pushHistory();
+  addingNew = true;
   artworks.push({ id: '', creator: '', title: '', artform: '', created: '' });
   selected.clear();
   selected.add(artworks.length - 1);
@@ -688,7 +742,7 @@ async function splitSelected(idx) {
 
 function clearAll() {
   if (!artworks.length) return;
-  if (!confirm('Rensa hela listan?')) return;
+  if (settings.confirmClear && !confirm('Rensa hela listan?')) return;
   pushHistory();
   artworks = [];
   selected.clear();
@@ -707,6 +761,7 @@ async function pasteClipboard() {
     const cur  = area.value.trim();
     area.value = cur ? cur + '\n' + text.trim() : text.trim();
     showToast('Klistrat in från urklipp.', 'info');
+    if (settings.autoFetchOnPaste) fetchAll();
   } catch {
     showToast('Kunde inte läsa urklipp — klistra in manuellt.', 'error');
   }
@@ -722,6 +777,7 @@ function loadFile(e) {
     const text = ev.target.result.trim();
     area.value = cur ? cur + '\n' + text : text;
     showToast(`Fil inläst: ${file.name}`, 'info');
+    if (settings.autoFetchOnPaste) fetchAll();
   };
   reader.readAsText(file, 'UTF-8');
   e.target.value = '';
@@ -745,6 +801,7 @@ function handleKeydown(e) {
   }
   if (e.key === 'Escape') {
     closeModal();
+    closeSettings();
     hideCtxMenu();
     closePopover();
   }
@@ -829,7 +886,9 @@ async function buildPDF() {
 
     let lay = layout(1.0);
     const overflow = Math.max(neededH(lay) / maxH, worstW(lay));
-    if (overflow > 1.0) lay = layout(Math.max(1.0 / overflow, 0.60));
+    if (overflow > 1.0 && settings.minFontScale < 1.0) {
+      lay = layout(Math.max(1.0 / overflow, settings.minFontScale));
+    }
 
     const { cl, tl, al, sc, st, sa, sy } = lay;
 
@@ -941,6 +1000,42 @@ async function generatePDF() {
   }
 }
 
+// ── Settings modal ────────────────────────────────────────────────────────────
+function openSettings() {
+  $('set-confirm-clear').checked = settings.confirmClear;
+  $('set-auto-fetch')   .checked = settings.autoFetchOnPaste;
+  $('set-max-undo')     .value   = settings.maxUndo;
+  $('set-min-scale')    .value   = settings.minFontScale.toFixed(2);
+  $('settings-overlay').classList.add('open');
+}
+function closeSettings() {
+  $('settings-overlay').classList.remove('open');
+}
+function applySettingsFromForm() {
+  const rawUndo = parseInt($('set-max-undo').value, 10);
+  const undo    = Number.isFinite(rawUndo) ? Math.min(100, Math.max(5, rawUndo)) : DEFAULT_SETTINGS.maxUndo;
+  const scale   = parseFloat($('set-min-scale').value);
+
+  settings = {
+    confirmClear:     $('set-confirm-clear').checked,
+    autoFetchOnPaste: $('set-auto-fetch').checked,
+    maxUndo:          undo,
+    minFontScale:     Number.isFinite(scale) ? scale : DEFAULT_SETTINGS.minFontScale,
+  };
+  saveSettings();
+
+  while (history.length > settings.maxUndo) history.shift();
+
+  closeSettings();
+  showToast('Inställningar sparade.', 'success');
+}
+function resetSettingsForm() {
+  $('set-confirm-clear').checked = DEFAULT_SETTINGS.confirmClear;
+  $('set-auto-fetch')   .checked = DEFAULT_SETTINGS.autoFetchOnPaste;
+  $('set-max-undo')     .value   = DEFAULT_SETTINGS.maxUndo;
+  $('set-min-scale')    .value   = DEFAULT_SETTINGS.minFontScale.toFixed(2);
+}
+
 // ── Spinner keyframe ──────────────────────────────────────────────────────────
 (function injectSpinnerCSS() {
   const style = document.createElement('style');
@@ -950,6 +1045,7 @@ async function generatePDF() {
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
+  loadSettings();
   loadSession();
   renderPages();
   await loadLogo();
@@ -964,6 +1060,15 @@ async function init() {
   // Header buttons
   $('btn-clear')   .addEventListener('click', clearAll);
   $('btn-generate').addEventListener('click', generatePDF);
+  $('btn-settings').addEventListener('click', openSettings);
+
+  // Settings modal
+  $('settings-close').addEventListener('click', closeSettings);
+  $('settings-save') .addEventListener('click', applySettingsFromForm);
+  $('settings-reset').addEventListener('click', resetSettingsForm);
+  $('settings-overlay').addEventListener('click', e => {
+    if (e.target === $('settings-overlay')) closeSettings();
+  });
 
   // Search
   $('search-input').addEventListener('input', e => {
