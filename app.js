@@ -152,6 +152,12 @@ function undo() {
 
 // ── API-hämtning ──────────────────────────────────────────────────────────────
 async function fetchOne(vgId) {
+  const cacheKey = 'vgr_api_' + vgId.toUpperCase();
+  const cached   = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch { /* fall through */ }
+  }
+
   try {
     const r = await fetch(`${API_URL}?id=${encodeURIComponent(vgId)}`, {
       signal: AbortSignal.timeout(8000),
@@ -162,13 +168,15 @@ async function fetchOne(vgId) {
       r => (r.id || '').trim().toUpperCase() === vgId.toUpperCase()
     );
     if (!row) return null;
-    return {
+    const result = {
       id:      row.id      || vgId,
       creator: row.creator || '',
       title:   row.title   || '',
       artform: row.artform || '',
       created: row.created || '',
     };
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(result)); } catch { /* quota */ }
+    return result;
   } catch (e) {
     return e.name === 'TimeoutError' ? 'timeout' : 'error';
   }
@@ -623,6 +631,7 @@ function handleCtxAction(e) {
   switch (action) {
     case 'undo':      undo(); break;
     case 'edit':      if (indices.length) openEdit(indices[0]); break;
+    case 'duplicate': if (indices.length) duplicateSlot(indices[0]); break;
     case 'move-up':   moveItems(indices, -1); break;
     case 'move-down': moveItems(indices,  1); break;
     case 'merge':     mergeSelected(indices); break;
@@ -811,6 +820,86 @@ async function splitSelected(idx) {
   renderPages();
   saveSession();
   showToast('Uppdelning klar.', 'success');
+}
+
+// ── Export / Import ───────────────────────────────────────────────────────────
+function exportList() {
+  if (!artworks.length) { showToast('Listan är tom — inget att exportera.', 'error'); return; }
+  const json = JSON.stringify(artworks, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url, download: 'vgr_skyltar.json',
+  });
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Lista exporterad.', 'success');
+}
+
+function importList(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      if (!Array.isArray(parsed)) throw new Error('Ogiltigt format');
+      pushHistory();
+      artworks = parsed.map(a => ({
+        id:       String(a.id      || ''),
+        creator:  String(a.creator || ''),
+        title:    String(a.title   || ''),
+        artform:  String(a.artform || ''),
+        created:  String(a.created || ''),
+        sizeStep: Number.isInteger(a.sizeStep) ? a.sizeStep : 0,
+      }));
+      selected.clear();
+      selectedSlot = null;
+      closePopover();
+      renderPages();
+      saveSession();
+      showToast(`${artworks.length} konstverk importerade.`, 'success');
+    } catch {
+      showToast('Kunde inte läsa filen – kontrollera att det är en giltig JSON-export.', 'error');
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+}
+
+// ── Sortering ─────────────────────────────────────────────────────────────────
+function sortArtworks(key, dir) {
+  if (!artworks.length) return;
+  pushHistory();
+  artworks.sort((a, b) => {
+    const av = (a[key] || '').toLowerCase();
+    const bv = (b[key] || '').toLowerCase();
+    return dir * av.localeCompare(bv, 'sv');
+  });
+  selectedSlot = null;
+  closePopover();
+  renderPages();
+  saveSession();
+  showToast('Listan sorterad.', 'info');
+}
+
+// ── Duplicera ─────────────────────────────────────────────────────────────────
+function duplicateSlot(idx) {
+  if (idx < 0 || idx >= artworks.length) return;
+  pushHistory();
+  const copy = { ...artworks[idx] };
+  artworks.splice(idx + 1, 0, copy);
+  selectedSlot = null;
+  closePopover();
+  renderPages();
+  saveSession();
+  showToast('Skylt duplicerad.', 'success');
+}
+
+// ── Direktutskrift ────────────────────────────────────────────────────────────
+function printLabels() {
+  if (!artworks.length) { showToast('Inget att skriva ut.', 'error'); return; }
+  window.print();
 }
 
 function clearAll() {
@@ -1154,6 +1243,19 @@ async function init() {
   $('btn-clear')   .addEventListener('click', clearAll);
   $('btn-generate').addEventListener('click', generatePDF);
   $('btn-settings').addEventListener('click', openSettings);
+  $('btn-export')  .addEventListener('click', exportList);
+  $('btn-import')  .addEventListener('click', () => $('import-input').click());
+  $('import-input').addEventListener('change', importList);
+  $('btn-print')   .addEventListener('click', printLabels);
+
+  // Sort
+  $('sort-select').addEventListener('change', e => {
+    const val = e.target.value;
+    if (!val) return;
+    const [key, dir] = val.split('-');
+    sortArtworks(key, dir === 'asc' ? 1 : -1);
+    e.target.value = '';
+  });
 
   // Settings modal
   $('settings-close').addEventListener('click', closeSettings);
@@ -1205,6 +1307,33 @@ async function init() {
   });
   $('merge-bar-cancel').addEventListener('click', () => {
     closePopover();
+  });
+
+  // Bulk textstorlek
+  document.querySelectorAll('.merge-step-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const step = parseInt(btn.dataset.step);
+      pushHistory();
+      selected.forEach(idx => { if (artworks[idx]) artworks[idx].sizeStep = step; });
+      renderPages();
+      saveSession();
+      showToast(`Textstorlek ändrad för ${selected.size} skyltar.`, 'info');
+    });
+  });
+
+  // Tab-fälla i popovern
+  $('edit-popover').addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    const focusable = [...$('edit-popover').querySelectorAll(
+      'textarea, input, button:not([disabled])'
+    )];
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
   });
 
   // Klick på sidan bakgrund avmarkerar allt
