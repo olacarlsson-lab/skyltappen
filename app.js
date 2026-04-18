@@ -599,13 +599,18 @@ function bindPopoverInputs() {
 // ── Context menu ──────────────────────────────────────────────────────────────
 function showCtxMenu(e, slot) {
   e.preventDefault();
+
+  // Om högerklick på ett redan flervalt objekt — behåll urvalet.
+  // Annars välj bara det klickade objektet.
+  if (!selected.has(slot) || selected.size < 2) {
+    selected.clear();
+    selected.add(slot);
+    document.querySelectorAll('.label-slot.selected')
+      .forEach(x => x.classList.remove('selected'));
+    const el = document.querySelector(`.label-slot[data-slot="${slot}"]`);
+    if (el) el.classList.add('selected');
+  }
   selectedSlot = slot;
-  selected.clear();
-  selected.add(slot);
-  document.querySelectorAll('.label-slot.selected')
-    .forEach(x => x.classList.remove('selected'));
-  const el = document.querySelector(`.label-slot[data-slot="${slot}"]`);
-  if (el) el.classList.add('selected');
 
   const n = selected.size;
   $('ctx-merge').classList.toggle('disabled', n < 2);
