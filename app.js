@@ -560,9 +560,9 @@ function closePopover(keepSelection = false) {
     document.querySelectorAll('.label-slot.selected')
       .forEach(x => x.classList.remove('selected'));
     selected.clear();
+    selectedSlot = null;
     $('merge-bar')?.classList.remove('visible');
   }
-  selectedSlot = null;
 }
 
 function bindPopoverInputs() {
