@@ -32,6 +32,9 @@ const FIELD_META = [
   { key: 'id',      label: 'VG-nummer'      },
 ];
 
+// Fält där användaren kan lägga in manuella radbryt med Enter.
+const MULTILINE_FIELDS = new Set(['creator', 'title', 'artform']);
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let artworks   = [];          // Array<{ id, creator, title, artform, created }>
 let selected   = new Set();   // Indexes i artworks som är markerade (legacy, kept for ctx menu compat)
@@ -55,6 +58,15 @@ function esc(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// Delar text på \n och wrapp:ar varje rad i en <div class="cls">. Tomma strängar → "".
+function renderMultiline(text, cls) {
+  if (!text) return '';
+  return String(text)
+    .split('\n')
+    .map(line => `<div class="${cls}">${esc(line) || '&nbsp;'}</div>`)
+    .join('');
 }
 
 // ── Toast notifications ───────────────────────────────────────────────────────
@@ -243,6 +255,13 @@ function fitScale() {
   return Math.min(1, avail / (A4_W_MM * MM_TO_PX));
 }
 
+function artworkMatchesSearch(aw) {
+  if (!searchTerm) return true;
+  if (!aw) return false;
+  return [aw.creator, aw.title, aw.artform, aw.created, aw.id]
+    .some(v => (v || '').toLowerCase().includes(searchTerm));
+}
+
 function renderPages() {
   const scaler = $('page-scaler');
   const label  = $('list-label');
@@ -272,6 +291,9 @@ function renderPages() {
 
   const totalPages = Math.max(1, Math.ceil(artworks.length / 10));
 
+  let matchCount = 0;
+  let firstMatchEl = null;
+
   for (let p = 0; p < totalPages; p++) {
     const wrapper = document.createElement('div');
     wrapper.className = 'page-wrapper';
@@ -288,7 +310,18 @@ function renderPages() {
         const slot = p * 10 + row * 2 + col;
         const aw = artworks[slot] ?? null;
 
+        const isMatch = aw && artworkMatchesSearch(aw);
         const labelEl = createLabelEl(slot, aw);
+
+        if (aw && searchTerm) {
+          if (isMatch) {
+            labelEl.classList.add('search-match');
+            matchCount++;
+            if (!firstMatchEl) firstMatchEl = labelEl;
+          } else {
+            labelEl.classList.add('search-dim');
+          }
+        }
 
         // Exact Avery coordinates
         const x = 15 + col * (85 + 10);   // mm
@@ -309,25 +342,14 @@ function renderPages() {
     scaler.appendChild(wrapper);
   }
 
-  // Apply search highlighting
   if (searchTerm) {
-    let matchCount = 0;
-    let firstMatch = null;
-    document.querySelectorAll('.label-slot.filled').forEach(el => {
-      const aw = artworks[parseInt(el.dataset.slot)];
-      if (!aw) return;
-      const matches = [aw.creator, aw.title, aw.artform, aw.created, aw.id]
-        .some(v => (v || '').toLowerCase().includes(searchTerm));
-      el.classList.toggle('search-dim', !matches);
-      if (matches) {
-        matchCount++;
-        if (!firstMatch) firstMatch = el;
-      }
-    });
     label.textContent = `${matchCount} av ${artworks.length} konstverk`;
-    firstMatch?.closest('.page-wrapper')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (firstMatchEl) {
+      requestAnimationFrame(() => {
+        firstMatchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
   } else {
-    document.querySelectorAll('.label-slot.search-dim').forEach(el => el.classList.remove('search-dim'));
     label.textContent = `${artworks.length} konstverk`;
   }
 }
@@ -345,9 +367,9 @@ function createLabelEl(slot, aw) {
       <div class="slot-badge">${slot + 1}</div>
       <div class="label-content">
         <div class="label-text-area">
-          ${aw.creator ? `<div class="sign-creator">${esc(aw.creator)}</div>` : ''}
-          ${aw.title   ? `<div class="sign-title">${esc(aw.title)}</div>`     : ''}
-          ${aw.artform ? `<div class="sign-artform">${esc(aw.artform)}</div>` : ''}
+          ${renderMultiline(aw.creator, 'sign-creator')}
+          ${renderMultiline(aw.title,   'sign-title')}
+          ${renderMultiline(aw.artform, 'sign-artform')}
           ${aw.created ? `<div class="sign-year">${esc(aw.created)}</div>`    : ''}
         </div>
         <div class="sign-bottom">
@@ -466,9 +488,9 @@ function updateLabelEl(slot) {
   const id = el.querySelector('.sign-id');
   if (ta) {
     ta.innerHTML = `
-      ${aw.creator ? `<div class="sign-creator">${esc(aw.creator)}</div>` : ''}
-      ${aw.title   ? `<div class="sign-title">${esc(aw.title)}</div>`     : ''}
-      ${aw.artform ? `<div class="sign-artform">${esc(aw.artform)}</div>` : ''}
+      ${renderMultiline(aw.creator, 'sign-creator')}
+      ${renderMultiline(aw.title,   'sign-title')}
+      ${renderMultiline(aw.artform, 'sign-artform')}
       ${aw.created ? `<div class="sign-year">${esc(aw.created)}</div>`    : ''}`;
   }
   if (id) id.textContent = aw.id;
@@ -620,13 +642,18 @@ function openEdit(idx) {
   FIELD_META.forEach(({ key, label }) => {
     const div = document.createElement('div');
     div.className = 'modal-field';
-    div.innerHTML = `<label>${label}</label>
-      <input type="text" data-key="${key}" value="${esc(aw[key] || '')}">`;
+    if (MULTILINE_FIELDS.has(key)) {
+      div.innerHTML = `<label>${label}</label>
+        <textarea data-key="${key}" rows="2" spellcheck="false">${esc(aw[key] || '')}</textarea>`;
+    } else {
+      div.innerHTML = `<label>${label}</label>
+        <input type="text" data-key="${key}" value="${esc(aw[key] || '')}">`;
+    }
     body.appendChild(div);
   });
 
   $('modal-overlay').classList.add('open');
-  body.querySelector('input')?.focus();
+  body.querySelector('[data-key]')?.focus();
 }
 
 function closeModal() {
@@ -645,8 +672,11 @@ function saveModal() {
   if (editingIdx < 0) return;
 
   const fields = {};
-  document.querySelectorAll('#modal-body input').forEach(inp => {
-    fields[inp.dataset.key] = inp.value.trim();
+  document.querySelectorAll('#modal-body [data-key]').forEach(inp => {
+    const val = MULTILINE_FIELDS.has(inp.dataset.key)
+      ? inp.value.replace(/[ \t]+(\n|$)/g, '$1').replace(/\n{3,}/g, '\n\n').trim()
+      : inp.value.trim();
+    fields[inp.dataset.key] = val;
   });
 
   if (addingNew) {
@@ -840,7 +870,7 @@ function handleKeydown(e) {
       deleteSelected([selectedSlot]);
     }
   }
-  if (e.key === 'Enter' && active.closest('#modal-overlay')) {
+  if (e.key === 'Enter' && active.closest('#modal-overlay') && active.tagName !== 'TEXTAREA') {
     saveModal();
   }
   if (e.key === 'Escape') {
@@ -871,6 +901,21 @@ function wrapText(text, font, size, maxWidth, maxLines) {
   }
   if (cur && lines.length < maxLines) lines.push(cur);
   return lines;
+}
+
+/** Respekterar manuella \n och wrapp:ar varje del med wrapText. */
+function wrapWithBreaks(text, font, size, maxWidth, maxLines) {
+  if (!text) return [];
+  const segments = String(text).split('\n');
+  const out = [];
+  for (const seg of segments) {
+    if (out.length >= maxLines) break;
+    const trimmed = seg.trim();
+    if (!trimmed) { out.push(''); continue; }
+    const wrapped = wrapText(trimmed, font, size, maxWidth, maxLines - out.length);
+    out.push(...wrapped);
+  }
+  return out.slice(0, maxLines);
 }
 
 async function buildPDF() {
@@ -908,9 +953,9 @@ async function buildPDF() {
       const sa = Math.max(7, Math.round(12 * s));
       const sy = Math.max(7, Math.round(10 * s));
       return {
-        cl: creator ? wrapText(creator, fontReg,  sc, maxW, 2) : [],
-        tl: title   ? wrapText(title,   fontBold, st, maxW, 3) : [],
-        al: artform ? wrapText(artform,  fontReg,  sa, maxW, 2) : [],
+        cl: creator ? wrapWithBreaks(creator, fontReg,  sc, maxW, 3) : [],
+        tl: title   ? wrapWithBreaks(title,   fontBold, st, maxW, 3) : [],
+        al: artform ? wrapWithBreaks(artform, fontReg,  sa, maxW, 3) : [],
         sc, st, sa, sy,
       };
     };
