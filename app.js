@@ -248,7 +248,19 @@ function renderPages() {
   const label  = $('list-label');
   if (!scaler) return;
 
-  label.textContent = `${artworks.length} konstverk`;
+  // Filtered display list [{idx, aw}] – idx is the real artworks index
+  const displayItems = artworks.reduce((acc, aw, i) => {
+    if (!searchTerm || [aw.creator, aw.title, aw.artform, aw.created, aw.id]
+        .some(v => (v || '').toLowerCase().includes(searchTerm))) {
+      acc.push({ idx: i, aw });
+    }
+    return acc;
+  }, []);
+
+  label.textContent = searchTerm
+    ? `${displayItems.length} av ${artworks.length} konstverk`
+    : `${artworks.length} konstverk`;
+
   currentScale = fitScale();
 
   const wPx = A4_W_MM * MM_TO_PX * currentScale;
@@ -270,7 +282,15 @@ function renderPages() {
     return;
   }
 
-  const totalPages = Math.max(1, Math.ceil(artworks.length / 10));
+  if (!displayItems.length) {
+    scaler.innerHTML = `<div class="wysiwyg-empty">
+      <h2>Inga träffar</h2>
+      <p>Ingen skylt matchar sökningen.</p>
+    </div>`;
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(displayItems.length / 10));
 
   for (let p = 0; p < totalPages; p++) {
     const wrapper = document.createElement('div');
@@ -285,8 +305,10 @@ function renderPages() {
     // 10 label slots per page
     for (let row = 0; row < 5; row++) {
       for (let col = 0; col < 2; col++) {
-        const slot = p * 10 + row * 2 + col;
-        const aw = artworks[slot] ?? null;
+        const displaySlot = p * 10 + row * 2 + col;
+        const entry = displayItems[displaySlot] ?? null;
+        const slot = entry?.idx ?? null;
+        const aw   = entry?.aw  ?? null;
 
         const labelEl = createLabelEl(slot, aw);
 
