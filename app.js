@@ -360,8 +360,11 @@ function renderPages() {
       });
     }
   } else {
-    label.textContent = `${artworks.length} konstverk`;
+    const pageLabel = totalPages > 1 ? ` · ${totalPages} sidor` : '';
+    label.textContent = `${artworks.length} konstverk${pageLabel}`;
   }
+
+  document.title = `${artworks.length} konstverk · VGR Konstskylt`;
 }
 
 function createLabelEl(slot, aw) {
@@ -439,6 +442,8 @@ function createLabelEl(slot, aw) {
     });
   } else {
     el.textContent = '+';
+    el.title = 'Lägg till konstverk';
+    el.addEventListener('click', () => addManual());
   }
 
   return el;
@@ -969,12 +974,43 @@ function handleKeydown(e) {
     e.preventDefault();
     undo();
   }
+
+  // Ctrl/Cmd+A — välj alla
+  if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !inField) {
+    e.preventDefault();
+    selected.clear();
+    artworks.forEach((_, i) => selected.add(i));
+    document.querySelectorAll('.label-slot.filled').forEach(el => el.classList.add('selected'));
+    updateMergeBar();
+  }
+
   if (!inField && (e.key === 'Delete' || e.key === 'Backspace')) {
     e.preventDefault();
     if (selectedSlot !== null) {
       deleteSelected([selectedSlot]);
     }
   }
+
+  // Alt+↑/↓ — flytta vald skylt
+  if (!inField && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && selectedSlot !== null) {
+    e.preventDefault();
+    const dir = e.key === 'ArrowUp' ? -1 : 1;
+    const newSlot = selectedSlot + dir;
+    if (newSlot >= 0 && newSlot < artworks.length) {
+      pushHistory();
+      [artworks[selectedSlot], artworks[newSlot]] = [artworks[newSlot], artworks[selectedSlot]];
+      selectedSlot = newSlot;
+      selected.clear();
+      selected.add(newSlot);
+      renderPages();
+      saveSession();
+      requestAnimationFrame(() => {
+        document.querySelector(`.label-slot[data-slot="${newSlot}"]`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+  }
+
   if (e.key === 'Enter' && active.closest('#modal-overlay') && active.tagName !== 'TEXTAREA') {
     saveModal();
   }
@@ -983,6 +1019,13 @@ function handleKeydown(e) {
     closeSettings();
     hideCtxMenu();
     closePopover();
+    // Rensa sökfältet om det har innehåll
+    const si = $('search-input');
+    if (si && si.value) {
+      si.value = '';
+      searchTerm = '';
+      renderPages();
+    }
   }
 }
 
