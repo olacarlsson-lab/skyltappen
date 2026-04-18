@@ -491,9 +491,8 @@ function openPopover(slot, labelEl) {
   $('pop-id').value            = aw.id      || '';
 
   const step = aw.sizeStep || 0;
-  pop.querySelectorAll('.pop-step-btn').forEach(btn =>
-    btn.classList.toggle('active', parseInt(btn.dataset.step) === step)
-  );
+  $('pop-step-slider').value = step;
+  $('pop-step-value').textContent = ['Standard', 'Mindre', 'Minst'][step];
 
   pop.style.display = 'block';
   positionPopover(labelEl);
@@ -544,18 +543,14 @@ function bindPopoverInputs() {
       saveSession();
     });
   });
-  document.querySelectorAll('.pop-step-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (selectedSlot === null) return;
-      const step = parseInt(btn.dataset.step);
-      artworks[selectedSlot].sizeStep = step;
-      document.querySelectorAll('.pop-step-btn').forEach(b =>
-        b.classList.toggle('active', parseInt(b.dataset.step) === step)
-      );
-      const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
-      if (el) el.dataset.step = step;
-      saveSession();
-    });
+  $('pop-step-slider').addEventListener('input', e => {
+    if (selectedSlot === null) return;
+    const step = parseInt(e.target.value);
+    artworks[selectedSlot].sizeStep = step;
+    $('pop-step-value').textContent = ['Standard', 'Mindre', 'Minst'][step];
+    const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
+    if (el) el.dataset.step = step;
+    saveSession();
   });
 
   $('pop-close').addEventListener('click', closePopover);
