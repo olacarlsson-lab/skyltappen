@@ -248,7 +248,19 @@ function renderPages() {
   const label  = $('list-label');
   if (!scaler) return;
 
-  label.textContent = `${artworks.length} konstverk`;
+  // Filtered display list [{idx, aw}] – idx is the real artworks index
+  const displayItems = artworks.reduce((acc, aw, i) => {
+    if (!searchTerm || [aw.creator, aw.title, aw.artform, aw.created, aw.id]
+        .some(v => (v || '').toLowerCase().includes(searchTerm))) {
+      acc.push({ idx: i, aw });
+    }
+    return acc;
+  }, []);
+
+  label.textContent = searchTerm
+    ? `${displayItems.length} av ${artworks.length} konstverk`
+    : `${artworks.length} konstverk`;
+
   currentScale = fitScale();
 
   const wPx = A4_W_MM * MM_TO_PX * currentScale;
@@ -270,7 +282,15 @@ function renderPages() {
     return;
   }
 
-  const totalPages = Math.max(1, Math.ceil(artworks.length / 10));
+  if (!displayItems.length) {
+    scaler.innerHTML = `<div class="wysiwyg-empty">
+      <h2>Inga träffar</h2>
+      <p>Ingen skylt matchar sökningen.</p>
+    </div>`;
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(displayItems.length / 10));
 
   for (let p = 0; p < totalPages; p++) {
     const wrapper = document.createElement('div');
@@ -285,8 +305,10 @@ function renderPages() {
     // 10 label slots per page
     for (let row = 0; row < 5; row++) {
       for (let col = 0; col < 2; col++) {
-        const slot = p * 10 + row * 2 + col;
-        const aw = artworks[slot] ?? null;
+        const displaySlot = p * 10 + row * 2 + col;
+        const entry = displayItems[displaySlot] ?? null;
+        const slot = entry?.idx ?? null;
+        const aw   = entry?.aw  ?? null;
 
         const labelEl = createLabelEl(slot, aw);
 
@@ -469,9 +491,8 @@ function openPopover(slot, labelEl) {
   $('pop-id').value            = aw.id      || '';
 
   const step = aw.sizeStep || 0;
-  pop.querySelectorAll('.pop-step-btn').forEach(btn =>
-    btn.classList.toggle('active', parseInt(btn.dataset.step) === step)
-  );
+  $('pop-step-slider').value = step;
+  $('pop-step-value').textContent = ['Standard', 'Mindre', 'Minst'][step];
 
   pop.style.display = 'block';
   positionPopover(labelEl);
@@ -522,18 +543,14 @@ function bindPopoverInputs() {
       saveSession();
     });
   });
-  document.querySelectorAll('.pop-step-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (selectedSlot === null) return;
-      const step = parseInt(btn.dataset.step);
-      artworks[selectedSlot].sizeStep = step;
-      document.querySelectorAll('.pop-step-btn').forEach(b =>
-        b.classList.toggle('active', parseInt(b.dataset.step) === step)
-      );
-      const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
-      if (el) el.dataset.step = step;
-      saveSession();
-    });
+  $('pop-step-slider').addEventListener('input', e => {
+    if (selectedSlot === null) return;
+    const step = parseInt(e.target.value);
+    artworks[selectedSlot].sizeStep = step;
+    $('pop-step-value').textContent = ['Standard', 'Mindre', 'Minst'][step];
+    const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
+    if (el) el.dataset.step = step;
+    saveSession();
   });
 
   $('pop-close').addEventListener('click', closePopover);

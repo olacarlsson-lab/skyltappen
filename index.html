@@ -109,11 +109,13 @@
       <label>År<input id="pop-year" type="text"></label>
       <label>VG-nummer<input id="pop-id" type="text"></label>
       <div class="pop-step-row">
-        <span class="pop-step-label">Textstorlek</span>
-        <div class="pop-step-btns">
-          <button class="pop-step-btn" data-step="0" title="Standard">A</button>
-          <button class="pop-step-btn" data-step="1" title="Mindre">A</button>
-          <button class="pop-step-btn" data-step="2" title="Minst">A</button>
+        <div class="pop-step-header">
+          <span class="pop-step-label">Textstorlek</span>
+          <span id="pop-step-value" class="pop-step-value">Standard</span>
+        </div>
+        <input type="range" id="pop-step-slider" class="pop-step-slider" min="0" max="2" step="1" value="0">
+        <div class="pop-step-ticks">
+          <span>Standard</span><span>Mindre</span><span>Minst</span>
         </div>
       </div>
     </div>
