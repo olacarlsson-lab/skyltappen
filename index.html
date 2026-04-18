@@ -108,6 +108,14 @@
       <label>Konsttyp<input id="pop-artform" type="text"></label>
       <label>År<input id="pop-year" type="text"></label>
       <label>VG-nummer<input id="pop-id" type="text"></label>
+      <div class="pop-step-row">
+        <span class="pop-step-label">Textstorlek</span>
+        <div class="pop-step-btns">
+          <button class="pop-step-btn" data-step="0" title="Standard">A</button>
+          <button class="pop-step-btn" data-step="1" title="Mindre">A</button>
+          <button class="pop-step-btn" data-step="2" title="Minst">A</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -120,15 +128,6 @@
     <li class="ctx-item" data-action="edit">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Redigera
-    </li>
-    <li class="ctx-divider"></li>
-    <li class="ctx-item" data-action="move-up">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-      Flytta upp
-    </li>
-    <li class="ctx-item" data-action="move-down">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-      Flytta ned
     </li>
     <li class="ctx-divider"></li>
     <li id="ctx-merge" class="ctx-item" data-action="merge">

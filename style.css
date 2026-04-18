@@ -328,8 +328,11 @@ body {
   height: 54mm;
   box-sizing: border-box;
   cursor: pointer;
+  --ss: 1;
   /* left/top set per slot */
 }
+.label-slot[data-step="1"] { --ss: 0.85; }
+.label-slot[data-step="2"] { --ss: 0.70; }
 
 /* Empty slot: dashed border, subtle */
 .label-slot.empty {
@@ -379,7 +382,7 @@ body {
 }
 
 .sign-creator {
-  font-size: 4.94mm;
+  font-size: calc(4.94mm * var(--ss));
   font-weight: 400;
   color: #000;
   line-height: 1.2;
@@ -388,7 +391,7 @@ body {
   text-overflow: ellipsis;
 }
 .sign-title {
-  font-size: 4.94mm;
+  font-size: calc(4.94mm * var(--ss));
   font-weight: 700;
   color: #000;
   line-height: 1.2;
@@ -399,7 +402,7 @@ body {
   margin-top: 0.5mm;
 }
 .sign-artform {
-  font-size: 4.23mm;
+  font-size: calc(4.23mm * var(--ss));
   font-weight: 400;
   color: #000;
   line-height: 1.2;
@@ -409,7 +412,7 @@ body {
   margin-top: 0.8mm;
 }
 .sign-year {
-  font-size: 3.53mm;
+  font-size: calc(3.53mm * var(--ss));
   font-weight: 400;
   color: #000;
   margin-top: 0.4mm;
@@ -543,6 +546,50 @@ body {
   border-color: var(--teal);
   box-shadow: 0 0 0 2px rgba(0,91,137,0.12);
 }
+
+.pop-step-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.pop-step-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pop-step-btns {
+  display: flex;
+  gap: 3px;
+}
+
+.pop-step-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  width: 32px;
+  height: 26px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.pop-step-btn[data-step="0"] { font-size: 14px; }
+.pop-step-btn[data-step="1"] { font-size: 11px; }
+.pop-step-btn[data-step="2"] { font-size: 9px;  }
+.pop-step-btn:hover { background: var(--teal-light); border-color: var(--teal); color: var(--teal); }
+.pop-step-btn.active { background: var(--teal); border-color: var(--teal); color: white; }
 
 /* ── Merge bar ───────────────────────────────────────────────────────────────── */
 .merge-bar {

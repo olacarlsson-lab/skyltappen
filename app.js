@@ -314,6 +314,7 @@ function createLabelEl(slot, aw) {
   const el = document.createElement('div');
   el.className = `label-slot ${aw ? 'filled' : 'empty'}`;
   el.dataset.slot = slot;
+  if (aw) el.dataset.step = aw.sizeStep || 0;
 
   if (aw) {
     if (slot === selectedSlot) el.classList.add('selected');
@@ -449,6 +450,7 @@ function updateLabelEl(slot) {
       ${aw.created ? `<div class="sign-year">${esc(aw.created)}</div>`    : ''}`;
   }
   if (id) id.textContent = aw.id;
+  el.dataset.step = aw.sizeStep || 0;
   $('pop-vg-id').textContent = aw.id;
 }
 
@@ -465,6 +467,11 @@ function openPopover(slot, labelEl) {
   $('pop-artform').value       = aw.artform || '';
   $('pop-year').value          = aw.created || '';
   $('pop-id').value            = aw.id      || '';
+
+  const step = aw.sizeStep || 0;
+  pop.querySelectorAll('.pop-step-btn').forEach(btn =>
+    btn.classList.toggle('active', parseInt(btn.dataset.step) === step)
+  );
 
   pop.style.display = 'block';
   positionPopover(labelEl);
@@ -515,6 +522,20 @@ function bindPopoverInputs() {
       saveSession();
     });
   });
+  document.querySelectorAll('.pop-step-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (selectedSlot === null) return;
+      const step = parseInt(btn.dataset.step);
+      artworks[selectedSlot].sizeStep = step;
+      document.querySelectorAll('.pop-step-btn').forEach(b =>
+        b.classList.toggle('active', parseInt(b.dataset.step) === step)
+      );
+      const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
+      if (el) el.dataset.step = step;
+      saveSession();
+    });
+  });
+
   $('pop-close').addEventListener('click', closePopover);
 
   // Close popover when clicking on the A4 page background (not on a label)
@@ -792,6 +813,7 @@ function handleKeydown(e) {
     undo();
   }
   if (!inField && (e.key === 'Delete' || e.key === 'Backspace')) {
+    e.preventDefault();
     if (selectedSlot !== null) {
       deleteSelected([selectedSlot]);
     }
@@ -844,21 +866,25 @@ async function buildPDF() {
 
   const black = rgb(0, 0, 0);
 
+  const STEP_SCALE = [1.0, 0.85, 0.70];
+
   /** Ritar en enskild skylt. cardX/cardY = nedre vänstra hörnet i pt. */
   const drawSign = (page, aw, cardX, cardY) => {
     const maxW = AVERY.cardW - PAD_LEFT - PAD_RIGHT;
     const maxH = AVERY.cardH - 2 * PAD_V - 8 * MM;
 
-    const creator = aw.creator || '';
-    const title   = aw.title   || '';
-    const artform = aw.artform || '';
-    const created = aw.created || '';
+    const creator  = aw.creator || '';
+    const title    = aw.title   || '';
+    const artform  = aw.artform || '';
+    const created  = aw.created || '';
+    const stepMul  = STEP_SCALE[aw.sizeStep || 0] ?? 1.0;
 
     const layout = scale => {
-      const sc = Math.max(8, Math.round(14 * scale));
-      const st = Math.max(8, Math.round(14 * scale));
-      const sa = Math.max(7, Math.round(12 * scale));
-      const sy = Math.max(7, Math.round(10 * scale));
+      const s = scale * stepMul;
+      const sc = Math.max(8, Math.round(14 * s));
+      const st = Math.max(8, Math.round(14 * s));
+      const sa = Math.max(7, Math.round(12 * s));
+      const sy = Math.max(7, Math.round(10 * s));
       return {
         cl: creator ? wrapText(creator, fontReg,  sc, maxW, 2) : [],
         tl: title   ? wrapText(title,   fontBold, st, maxW, 3) : [],
