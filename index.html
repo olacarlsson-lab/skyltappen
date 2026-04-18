@@ -18,6 +18,16 @@
       <span class="header-title">VGR Konstskylt</span>
     </div>
     <div class="header-actions">
+      <button id="btn-print" class="icon-btn icon-btn--header" title="Skriv ut" aria-label="Skriv ut">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      </button>
+      <button id="btn-export" class="icon-btn icon-btn--header" title="Exportera lista (JSON)" aria-label="Exportera lista">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </button>
+      <button id="btn-import" class="icon-btn icon-btn--header" title="Importera lista (JSON)" aria-label="Importera lista">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <input type="file" id="import-input" accept=".json" style="display:none">
       <button id="btn-settings" class="icon-btn icon-btn--header" title="Inställningar" aria-label="Inställningar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -81,6 +91,15 @@
       <div class="toolbar">
         <span id="list-label" class="toolbar-count">0 konstverk</span>
         <div class="toolbar-right">
+          <select id="sort-select" class="sort-select" title="Sortera listan">
+            <option value="">Sortera…</option>
+            <option value="creator-asc">Konstnär A–Ö</option>
+            <option value="creator-desc">Konstnär Ö–A</option>
+            <option value="title-asc">Titel A–Ö</option>
+            <option value="title-desc">Titel Ö–A</option>
+            <option value="artform-asc">Konsttyp A–Ö</option>
+            <option value="artform-desc">Konsttyp Ö–A</option>
+          </select>
           <div class="search-wrap">
             <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input id="search-input" class="search-input" type="search" placeholder="Sök…">
@@ -130,6 +149,10 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Redigera
     </li>
+    <li class="ctx-item" data-action="duplicate">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Duplicera
+    </li>
     <li class="ctx-divider"></li>
     <li id="ctx-merge" class="ctx-item" data-action="merge">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
@@ -167,6 +190,13 @@
   <div id="merge-bar" class="merge-bar">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
     <span id="merge-bar-count">2 konstverk valda</span>
+    <div class="merge-bar-divider"></div>
+    <div class="merge-step-btns" title="Textstorlek för valda">
+      <button class="merge-step-btn" data-step="2" title="Minst">A</button>
+      <button class="merge-step-btn" data-step="1" title="Mindre">A</button>
+      <button class="merge-step-btn" data-step="0" title="Standard">A</button>
+    </div>
+    <div class="merge-bar-divider"></div>
     <button id="merge-bar-btn" class="btn btn-primary btn-sm">Slå ihop</button>
     <button id="merge-bar-cancel" class="btn btn-ghost btn-sm">Avbryt</button>
   </div>
