@@ -39,6 +39,7 @@ let history    = [];          // Undo-stack (JSON-snapshots)
 let searchTerm = '';
 let logoBytes  = null;        // Uint8Array med PNG-data
 let editingIdx = -1;
+let addingNew  = false;       // true när modal öppnades via "Lägg till manuellt"
 
 // WYSIWYG state
 let selectedSlot = null;  // global slot index of selected label
@@ -578,16 +579,42 @@ function openEdit(idx) {
 }
 
 function closeModal() {
-  $('modal-overlay').classList.remove('open');
+  if (addingNew && editingIdx >= 0 && editingIdx < artworks.length) {
+    artworks.splice(editingIdx, 1);
+    selected.clear();
+    renderPages();
+    saveSession();
+  }
+  addingNew  = false;
   editingIdx = -1;
+  $('modal-overlay').classList.remove('open');
 }
 
 function saveModal() {
   if (editingIdx < 0) return;
-  pushHistory();
+
+  const fields = {};
   document.querySelectorAll('#modal-body input').forEach(inp => {
-    artworks[editingIdx][inp.dataset.key] = inp.value.trim();
+    fields[inp.dataset.key] = inp.value.trim();
   });
+
+  if (addingNew) {
+    const hasContent = Object.values(fields).some(v => v !== '');
+    if (!hasContent) {
+      showToast('Fyll i minst ett fält för att lägga till ett konstverk.', 'error');
+      return;
+    }
+    artworks.splice(editingIdx, 1);   // ta bort sentineln
+    pushHistory();                     // snapshot utan den tomma posten
+    artworks.push(fields);
+    addingNew = false;
+  } else {
+    pushHistory();
+    Object.entries(fields).forEach(([key, val]) => {
+      artworks[editingIdx][key] = val;
+    });
+  }
+
   closeModal();
   renderPages();
   saveSession();
@@ -596,7 +623,7 @@ function saveModal() {
 
 // ── Åtgärder ──────────────────────────────────────────────────────────────────
 function addManual() {
-  pushHistory();
+  addingNew = true;
   artworks.push({ id: '', creator: '', title: '', artform: '', created: '' });
   selected.clear();
   selected.add(artworks.length - 1);
