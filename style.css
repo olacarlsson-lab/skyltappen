@@ -454,8 +454,28 @@ body {
 }
 
 /* Drag state */
-.label-slot.dragging { opacity: 0.35; }
-.label-slot.drag-over { border-color: var(--teal) !important; background: rgba(0,91,137,0.04); }
+.label-slot[draggable="true"] { cursor: grab; }
+
+.label-slot.dragging {
+  opacity: 0.35;
+  outline: 2px dashed var(--teal);
+  outline-offset: 2px;
+}
+
+/* Insert-before indicator: teal line on the left edge of the drop target */
+.label-slot.drag-over {
+  background: rgba(0,91,137,0.06);
+  box-shadow: -3px 0 0 0 var(--teal), 0 0 0 1px rgba(0,91,137,0.20);
+}
+
+/* Brief glow after a successful drop */
+@keyframes slot-land {
+  0%   { box-shadow: 0 0 0 4px rgba(0,91,137,0.45); }
+  100% { box-shadow: none; }
+}
+.label-slot.just-dropped {
+  animation: slot-land 0.55s ease-out forwards;
+}
 
 /* Edit popover */
 .edit-popover {

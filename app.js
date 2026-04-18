@@ -355,7 +355,9 @@ function createLabelEl(slot, aw) {
         el.classList.add('drag-over');
       }
     });
-    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    el.addEventListener('dragleave', e => {
+      if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over');
+    });
     el.addEventListener('dragend', () => {
       el.classList.remove('dragging');
       document.querySelectorAll('.label-slot.drag-over')
@@ -366,13 +368,19 @@ function createLabelEl(slot, aw) {
       e.preventDefault();
       if (dragSrc === null || dragSrc === slot) return;
       pushHistory();
+      const insertAt = slot > dragSrc ? slot - 1 : slot;
       const [item] = artworks.splice(dragSrc, 1);
-      artworks.splice(slot > dragSrc ? slot - 1 : slot, 0, item);
+      artworks.splice(insertAt, 0, item);
       selectedSlot = null;
       renderPages();
       closePopover();
       saveSession();
       dragSrc = null;
+      const landEl = document.querySelector(`.label-slot[data-slot="${insertAt}"]`);
+      if (landEl) {
+        landEl.classList.add('just-dropped');
+        landEl.addEventListener('animationend', () => landEl.classList.remove('just-dropped'), { once: true });
+      }
     });
   } else {
     el.textContent = '+';
