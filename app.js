@@ -248,19 +248,6 @@ function renderPages() {
   const label  = $('list-label');
   if (!scaler) return;
 
-  // Filtered display list [{idx, aw}] – idx is the real artworks index
-  const displayItems = artworks.reduce((acc, aw, i) => {
-    if (!searchTerm || [aw.creator, aw.title, aw.artform, aw.created, aw.id]
-        .some(v => (v || '').toLowerCase().includes(searchTerm))) {
-      acc.push({ idx: i, aw });
-    }
-    return acc;
-  }, []);
-
-  label.textContent = searchTerm
-    ? `${displayItems.length} av ${artworks.length} konstverk`
-    : `${artworks.length} konstverk`;
-
   currentScale = fitScale();
 
   const wPx = A4_W_MM * MM_TO_PX * currentScale;
@@ -269,6 +256,7 @@ function renderPages() {
   scaler.innerHTML = '';
 
   if (!artworks.length) {
+    label.textContent = '0 konstverk';
     scaler.innerHTML = `<div class="wysiwyg-empty">
       <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
         <rect x="6" y="14" width="60" height="44" rx="4" stroke="#D1D5DB" stroke-width="2" fill="#F9FAFB"/>
@@ -282,15 +270,7 @@ function renderPages() {
     return;
   }
 
-  if (!displayItems.length) {
-    scaler.innerHTML = `<div class="wysiwyg-empty">
-      <h2>Inga träffar</h2>
-      <p>Ingen skylt matchar sökningen.</p>
-    </div>`;
-    return;
-  }
-
-  const totalPages = Math.max(1, Math.ceil(displayItems.length / 10));
+  const totalPages = Math.max(1, Math.ceil(artworks.length / 10));
 
   for (let p = 0; p < totalPages; p++) {
     const wrapper = document.createElement('div');
@@ -305,10 +285,8 @@ function renderPages() {
     // 10 label slots per page
     for (let row = 0; row < 5; row++) {
       for (let col = 0; col < 2; col++) {
-        const displaySlot = p * 10 + row * 2 + col;
-        const entry = displayItems[displaySlot] ?? null;
-        const slot = entry?.idx ?? null;
-        const aw   = entry?.aw  ?? null;
+        const slot = p * 10 + row * 2 + col;
+        const aw = artworks[slot] ?? null;
 
         const labelEl = createLabelEl(slot, aw);
 
@@ -329,6 +307,28 @@ function renderPages() {
 
     wrapper.appendChild(page);
     scaler.appendChild(wrapper);
+  }
+
+  // Apply search highlighting
+  if (searchTerm) {
+    let matchCount = 0;
+    let firstMatch = null;
+    document.querySelectorAll('.label-slot.filled').forEach(el => {
+      const aw = artworks[parseInt(el.dataset.slot)];
+      if (!aw) return;
+      const matches = [aw.creator, aw.title, aw.artform, aw.created, aw.id]
+        .some(v => (v || '').toLowerCase().includes(searchTerm));
+      el.classList.toggle('search-dim', !matches);
+      if (matches) {
+        matchCount++;
+        if (!firstMatch) firstMatch = el;
+      }
+    });
+    label.textContent = `${matchCount} av ${artworks.length} konstverk`;
+    firstMatch?.closest('.page-wrapper')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    document.querySelectorAll('.label-slot.search-dim').forEach(el => el.classList.remove('search-dim'));
+    label.textContent = `${artworks.length} konstverk`;
   }
 }
 
@@ -491,8 +491,9 @@ function openPopover(slot, labelEl) {
   $('pop-id').value            = aw.id      || '';
 
   const step = aw.sizeStep || 0;
-  $('pop-step-slider').value = step;
-  $('pop-step-value').textContent = ['Standard', 'Mindre', 'Minst'][step];
+  pop.querySelectorAll('.pop-step-btn').forEach(btn =>
+    btn.classList.toggle('active', parseInt(btn.dataset.step) === step)
+  );
 
   pop.style.display = 'block';
   positionPopover(labelEl);
@@ -543,14 +544,18 @@ function bindPopoverInputs() {
       saveSession();
     });
   });
-  $('pop-step-slider').addEventListener('input', e => {
-    if (selectedSlot === null) return;
-    const step = parseInt(e.target.value);
-    artworks[selectedSlot].sizeStep = step;
-    $('pop-step-value').textContent = ['Standard', 'Mindre', 'Minst'][step];
-    const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
-    if (el) el.dataset.step = step;
-    saveSession();
+  document.querySelectorAll('.pop-step-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (selectedSlot === null) return;
+      const step = parseInt(btn.dataset.step);
+      artworks[selectedSlot].sizeStep = step;
+      document.querySelectorAll('.pop-step-btn').forEach(b =>
+        b.classList.toggle('active', parseInt(b.dataset.step) === step)
+      );
+      const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
+      if (el) el.dataset.step = step;
+      saveSession();
+    });
   });
 
   $('pop-close').addEventListener('click', closePopover);

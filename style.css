@@ -549,17 +549,11 @@ body {
 
 .pop-step-row {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
   padding-top: 8px;
   margin-top: 4px;
   border-top: 1px solid var(--border);
-}
-
-.pop-step-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
 }
 
 .pop-step-label {
@@ -570,26 +564,35 @@ body {
   letter-spacing: 0.06em;
 }
 
-.pop-step-value {
-  font-size: 11px;
-  color: var(--teal);
-  font-weight: 600;
-}
-
-.pop-step-slider {
-  width: 100%;
-  accent-color: var(--teal);
-  cursor: pointer;
-  height: 4px;
-}
-
-.pop-step-ticks {
+.pop-step-btns {
   display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: var(--text-faint);
-  margin-top: -2px;
+  gap: 3px;
 }
+
+.pop-step-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  width: 32px;
+  height: 26px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.pop-step-btn[data-step="2"] { font-size: 9px;  }
+.pop-step-btn[data-step="1"] { font-size: 11px; }
+.pop-step-btn[data-step="0"] { font-size: 14px; }
+.pop-step-btn:hover { background: var(--teal-light); border-color: var(--teal); color: var(--teal); }
+.pop-step-btn.active { background: var(--teal); border-color: var(--teal); color: white; }
+
+/* Search dim */
+.label-slot.search-dim { opacity: 0.15; pointer-events: none; }
 
 /* ── Merge bar ───────────────────────────────────────────────────────────────── */
 .merge-bar {
