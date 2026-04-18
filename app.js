@@ -144,6 +144,8 @@ function undo() {
   artworks = JSON.parse(history.pop());
   selected.clear();
   selectedSlot = null;
+  const sel = $('sort-select');
+  if (sel) sel.value = '';
   renderPages();
   closePopover();
   saveSession();
@@ -599,13 +601,18 @@ function bindPopoverInputs() {
 // ── Context menu ──────────────────────────────────────────────────────────────
 function showCtxMenu(e, slot) {
   e.preventDefault();
+
+  // Om högerklick på ett redan flervalt objekt — behåll urvalet.
+  // Annars välj bara det klickade objektet.
+  if (!selected.has(slot) || selected.size < 2) {
+    selected.clear();
+    selected.add(slot);
+    document.querySelectorAll('.label-slot.selected')
+      .forEach(x => x.classList.remove('selected'));
+    const el = document.querySelector(`.label-slot[data-slot="${slot}"]`);
+    if (el) el.classList.add('selected');
+  }
   selectedSlot = slot;
-  selected.clear();
-  selected.add(slot);
-  document.querySelectorAll('.label-slot.selected')
-    .forEach(x => x.classList.remove('selected'));
-  const el = document.querySelector(`.label-slot[data-slot="${slot}"]`);
-  if (el) el.classList.add('selected');
 
   const n = selected.size;
   $('ctx-merge').classList.toggle('disabled', n < 2);
@@ -825,11 +832,12 @@ async function splitSelected(idx) {
 // ── Export / Import ───────────────────────────────────────────────────────────
 function exportList() {
   if (!artworks.length) { showToast('Listan är tom — inget att exportera.', 'error'); return; }
+  const ts   = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
   const json = JSON.stringify(artworks, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = Object.assign(document.createElement('a'), {
-    href: url, download: 'vgr_skyltar.json',
+    href: url, download: `vgr_skyltar_${ts}.json`,
   });
   a.click();
   URL.revokeObjectURL(url);
@@ -844,6 +852,9 @@ function importList(e) {
     try {
       const parsed = JSON.parse(ev.target.result);
       if (!Array.isArray(parsed)) throw new Error('Ogiltigt format');
+      if (artworks.length && !confirm(
+        `Importera ${parsed.length} konstverk?\n\nDen nuvarande listan (${artworks.length} konstverk) ersätts. Du kan ångra med Ctrl/Cmd+Z.`
+      )) return;
       pushHistory();
       artworks = parsed.map(a => ({
         id:       String(a.id      || ''),
@@ -880,7 +891,12 @@ function sortArtworks(key, dir) {
   closePopover();
   renderPages();
   saveSession();
-  showToast('Listan sorterad.', 'info');
+  const dirStr   = dir === 1 ? 'asc' : 'desc';
+  const sel      = $('sort-select');
+  if (sel) sel.value = `${key}-${dirStr}`;
+  const dirLabel = dir === 1 ? 'A–Ö' : 'Ö–A';
+  const keyLabel = { creator: 'Konstnär', title: 'Titel', artform: 'Konsttyp' }[key] || key;
+  showToast(`Sorterat: ${keyLabel} ${dirLabel}.`, 'info');
 }
 
 // ── Duplicera ─────────────────────────────────────────────────────────────────
@@ -1254,7 +1270,7 @@ async function init() {
     if (!val) return;
     const [key, dir] = val.split('-');
     sortArtworks(key, dir === 'asc' ? 1 : -1);
-    e.target.value = '';
+    // Behåll valt alternativ som indikation på aktiv sortering
   });
 
   // Settings modal
