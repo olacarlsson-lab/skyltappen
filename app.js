@@ -792,6 +792,7 @@ function handleKeydown(e) {
     undo();
   }
   if (!inField && (e.key === 'Delete' || e.key === 'Backspace')) {
+    e.preventDefault();
     if (selectedSlot !== null) {
       deleteSelected([selectedSlot]);
     }
