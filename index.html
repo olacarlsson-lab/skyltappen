@@ -70,6 +70,7 @@
       <div class="sidebar-section sidebar-info">
         <p class="sidebar-hint">Avery C32010 · 85×54 mm · 2×5 per A4</p>
         <p class="sidebar-hint">Klicka en skylt för att redigera direkt.</p>
+        <p class="sidebar-hint">Tryck <kbd>Enter</kbd> i Konstnär, Titel eller Konsttyp för manuellt radbryt.</p>
       </div>
     </aside>
 
@@ -103,9 +104,9 @@
       <button id="pop-close" class="pop-close">×</button>
     </div>
     <div class="popover-body">
-      <label>Konstnär<input id="pop-creator" type="text"></label>
-      <label>Konstverksnamn<input id="pop-title" type="text"></label>
-      <label>Konsttyp<input id="pop-artform" type="text"></label>
+      <label>Konstnär<textarea id="pop-creator" rows="2" spellcheck="false"></textarea></label>
+      <label>Konstverksnamn<textarea id="pop-title" rows="2" spellcheck="false"></textarea></label>
+      <label>Konsttyp<textarea id="pop-artform" rows="2" spellcheck="false"></textarea></label>
       <label>År<input id="pop-year" type="text"></label>
       <label>VG-nummer<input id="pop-id" type="text"></label>
       <div class="pop-step-row">

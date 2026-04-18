@@ -209,6 +209,16 @@ body {
   color: var(--text-faint);
   line-height: 1.5;
 }
+.sidebar-hint kbd {
+  font-family: inherit;
+  font-size: 10px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: #FAFAFA;
+  color: var(--text-muted);
+}
 
 /* ── Main area ───────────────────────────────────────────────────────────────── */
 .main-area {
@@ -401,6 +411,10 @@ body {
   -webkit-box-orient: vertical;
   margin-top: 0.5mm;
 }
+.sign-creator + .sign-creator,
+.sign-title + .sign-title,
+.sign-artform + .sign-artform { margin-top: 0; }
+
 .sign-artform {
   font-size: calc(4.23mm * var(--ss));
   font-weight: 400;
@@ -532,7 +546,8 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.popover-body input {
+.popover-body input,
+.popover-body textarea {
   padding: 5px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -542,7 +557,13 @@ body {
   outline: none;
   transition: border-color 0.12s;
 }
-.popover-body input:focus {
+.popover-body textarea {
+  resize: vertical;
+  min-height: 28px;
+  line-height: 1.35;
+}
+.popover-body input:focus,
+.popover-body textarea:focus {
   border-color: var(--teal);
   box-shadow: 0 0 0 2px rgba(0,91,137,0.12);
 }
@@ -592,7 +613,16 @@ body {
 .pop-step-btn.active { background: var(--teal); border-color: var(--teal); color: white; }
 
 /* Search dim */
-.label-slot.search-dim { opacity: 0.15; pointer-events: none; }
+.label-slot.search-dim { opacity: 0.18; pointer-events: none; filter: saturate(0.3); }
+.label-slot.filled.search-match {
+  border: 2px solid #E67E22;
+  box-shadow: 0 0 0 3px rgba(230,126,34,0.22);
+  animation: searchPulse 0.9s ease-out;
+}
+@keyframes searchPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(230,126,34,0.55); }
+  100% { box-shadow: 0 0 0 3px rgba(230,126,34,0.22); }
+}
 
 /* ── Merge bar ───────────────────────────────────────────────────────────────── */
 .merge-bar {
@@ -805,7 +835,8 @@ body {
   margin-bottom: 5px;
 }
 
-.modal-field input {
+.modal-field input,
+.modal-field textarea {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -817,7 +848,13 @@ body {
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
-.modal-field input:focus {
+.modal-field textarea {
+  resize: vertical;
+  min-height: 42px;
+  line-height: 1.4;
+}
+.modal-field input:focus,
+.modal-field textarea:focus {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(0,91,137,0.10);
   background: var(--surface);
