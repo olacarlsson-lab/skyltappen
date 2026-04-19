@@ -295,7 +295,7 @@ function renderPages() {
           <span class="tutorial-step-num">1</span>
           <div>
             <strong>Ange VG-nummer</strong>
-            <p>Skriv VG-nummer i textfältet till vänster, ett per rad. Du kan också ladda från fil eller urklipp.</p>
+            <p>Klistra in VG-nummer i textfältet – blandat med text, kommatecken eller mellanslag fungerar. Du kan också ladda från fil eller urklipp med knapparna bredvid.</p>
           </div>
         </li>
         <li>
@@ -309,11 +309,18 @@ function renderPages() {
           <span class="tutorial-step-num">3</span>
           <div>
             <strong>Redigera skyltar</strong>
-            <p>Klicka på en skylt för att redigera konstnär, titel, konsttyp och år direkt.</p>
+            <p>Dubbelklicka på en skylt för att redigera konstnär, titel, konsttyp och år. Högerklicka för fler alternativ.</p>
           </div>
         </li>
         <li>
           <span class="tutorial-step-num">4</span>
+          <div>
+            <strong>Slå ihop skyltar</strong>
+            <p>Markera flera skyltar (klicka + Shift/Ctrl) och välj "Slå ihop" för att samla ett konstverk på en skylt.</p>
+          </div>
+        </li>
+        <li>
+          <span class="tutorial-step-num">5</span>
           <div>
             <strong>Generera PDF</strong>
             <p>Klicka "Generera PDF" i menyn ovan – färdig för utskrift på Avery C32010.</p>
