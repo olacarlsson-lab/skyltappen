@@ -401,6 +401,7 @@ function createLabelEl(slot, aw) {
 
     el.addEventListener('click', e => {
       e.stopPropagation();
+      if ($('edit-popover').style.display !== 'none') { closePopover(false); return; }
       selectSlot(slot, el, e);
     });
     el.addEventListener('dblclick', e => {
@@ -455,7 +456,10 @@ function createLabelEl(slot, aw) {
   } else {
     el.textContent = '+';
     el.title = 'Lägg till konstverk';
-    el.addEventListener('click', () => addManual());
+    el.addEventListener('click', () => {
+      if ($('edit-popover').style.display !== 'none') { closePopover(false); return; }
+      addManual();
+    });
   }
 
   return el;
