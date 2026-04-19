@@ -211,15 +211,28 @@ async function fetchAll() {
   pw.style.display = 'block';
   pf.style.width = '0%';
 
+  const toFetch = ids.filter(id => !artworks.some(a => a.id.toUpperCase() === id.toUpperCase()));
   const notFound = [], errors = [];
+  let done = 0;
 
-  for (let i = 0; i < ids.length; i++) {
-    const vgId = ids[i];
-    pf.style.width = `${(i / ids.length) * 100}%`;
+  const CONCURRENCY = 5;
+  const queue = [...toFetch];
+  const results = new Map();
 
-    if (artworks.some(a => a.id.toUpperCase() === vgId.toUpperCase())) continue;
+  async function worker() {
+    while (queue.length) {
+      const vgId = queue.shift();
+      const result = await fetchOne(vgId);
+      results.set(vgId, result);
+      done++;
+      pf.style.width = `${(done / toFetch.length) * 100}%`;
+    }
+  }
 
-    const result = await fetchOne(vgId);
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, toFetch.length) }, worker));
+
+  for (const vgId of toFetch) {
+    const result = results.get(vgId);
     if (result && typeof result === 'object') {
       artworks.push(result);
     } else {
@@ -227,8 +240,9 @@ async function fetchAll() {
       else                 errors.push(vgId);
       artworks.push({ id: vgId, creator: '', title: '', artform: '', created: '' });
     }
-    renderPages();
   }
+
+  renderPages();
 
   pf.style.width = '100%';
   setTimeout(() => { pw.style.display = 'none'; }, 600);
@@ -237,7 +251,7 @@ async function fetchAll() {
   btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg> Hämta data`;
   saveSession();
 
-  const added = ids.length - notFound.length - errors.length;
+  const added = toFetch.length - notFound.length - errors.length;
   let type = 'success';
   let msg = `${ids.length} ID:n behandlade`;
   if (added > 0) msg += `, ${added} tillagda`;
@@ -1593,10 +1607,12 @@ async function init() {
     // Behåll valt alternativ som indikation på aktiv sortering
   });
 
-  // Search
+  // Search (debounced så renderPages inte triggas per tangenttryckning)
+  let _searchDebounceMain = null;
   $('search-input').addEventListener('input', e => {
     searchTerm = e.target.value.toLowerCase();
-    renderPages();
+    clearTimeout(_searchDebounceMain);
+    _searchDebounceMain = setTimeout(renderPages, 150);
   });
 
   // Modal
@@ -1677,8 +1693,12 @@ async function init() {
     }
   });
 
-  // Refit pages on resize
-  const ro = new ResizeObserver(() => renderPages());
+  // Refit pages on resize (debounced)
+  let _resizeDebounce = null;
+  const ro = new ResizeObserver(() => {
+    clearTimeout(_resizeDebounce);
+    _resizeDebounce = setTimeout(renderPages, 100);
+  });
   ro.observe($('page-viewport'));
 }
 
