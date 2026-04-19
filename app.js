@@ -46,8 +46,9 @@ let editingIdx = -1;
 let addingNew  = false;       // true när modal öppnades via "Lägg till manuellt"
 
 // WYSIWYG state
-let selectedSlot = null;  // global slot index of selected label
-let dragSrc      = null;  // drag source slot index
+let selectedSlot    = null;  // global slot index of selected label
+let dragSrc         = null;  // drag source slot index
+let lastDragOverEl  = null;  // element currently showing drag-over highlight
 
 // ── Hjälpare ──────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -438,67 +439,10 @@ function createLabelEl(slot, aw) {
         </div>
       </div>`;
 
-    el.addEventListener('click', e => {
-      e.stopPropagation();
-      if ($('edit-popover').style.display !== 'none') { closePopover(false); return; }
-      selectSlot(slot, el, e);
-    });
-    el.addEventListener('dblclick', e => {
-      e.stopPropagation();
-      openPopover(slot, el);
-    });
-
-    el.addEventListener('contextmenu', e => showCtxMenu(e, slot));
-
-    // Drag and drop
     el.draggable = true;
-    el.addEventListener('dragstart', e => {
-      dragSrc = slot;
-      e.dataTransfer.effectAllowed = 'move';
-      setTimeout(() => el.classList.add('dragging'), 0);
-    });
-    el.addEventListener('dragover', e => {
-      e.preventDefault();
-      if (dragSrc !== null && dragSrc !== slot) {
-        document.querySelectorAll('.label-slot.drag-over')
-          .forEach(x => x.classList.remove('drag-over'));
-        el.classList.add('drag-over');
-      }
-    });
-    el.addEventListener('dragleave', e => {
-      if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over');
-    });
-    el.addEventListener('dragend', () => {
-      el.classList.remove('dragging');
-      document.querySelectorAll('.label-slot.drag-over')
-        .forEach(x => x.classList.remove('drag-over'));
-      dragSrc = null;
-    });
-    el.addEventListener('drop', e => {
-      e.preventDefault();
-      if (dragSrc === null || dragSrc === slot) return;
-      pushHistory();
-      const insertAt = slot > dragSrc ? slot - 1 : slot;
-      const [item] = artworks.splice(dragSrc, 1);
-      artworks.splice(insertAt, 0, item);
-      selectedSlot = null;
-      renderPages();
-      closePopover();
-      saveSession();
-      dragSrc = null;
-      const landEl = document.querySelector(`.label-slot[data-slot="${insertAt}"]`);
-      if (landEl) {
-        landEl.classList.add('just-dropped');
-        landEl.addEventListener('animationend', () => landEl.classList.remove('just-dropped'), { once: true });
-      }
-    });
   } else {
     el.textContent = '+';
     el.title = 'Lägg till konstverk';
-    el.addEventListener('click', () => {
-      if ($('edit-popover').style.display !== 'none') { closePopover(false); return; }
-      addManual();
-    });
   }
 
   return el;
@@ -521,8 +465,9 @@ function selectSlot(slot, el, event = null) {
     selectedSlot = null;
   } else {
     // Vanligt klick — välj bara, öppna inte popover
-    document.querySelectorAll('.label-slot.selected')
-      .forEach(x => x.classList.remove('selected'));
+    selected.forEach(s => {
+      document.querySelector(`.label-slot[data-slot="${s}"]`)?.classList.remove('selected');
+    });
     selected.clear();
     selected.add(slot);
     selectedSlot = slot;
@@ -608,8 +553,7 @@ function positionPopover(labelEl) {
 function closePopover(keepSelection = false) {
   $('edit-popover').style.display = 'none';
   if (!keepSelection) {
-    document.querySelectorAll('.label-slot.selected')
-      .forEach(x => x.classList.remove('selected'));
+    selected.forEach(s => document.querySelector(`.label-slot[data-slot="${s}"]`)?.classList.remove('selected'));
     selected.clear();
     selectedSlot = null;
     $('merge-bar')?.classList.remove('visible');
@@ -661,10 +605,9 @@ function showCtxMenu(e, slot) {
   // Om högerklick på ett redan flervalt objekt — behåll urvalet.
   // Annars välj bara det klickade objektet.
   if (!selected.has(slot) || selected.size < 2) {
+    selected.forEach(s => document.querySelector(`.label-slot[data-slot="${s}"]`)?.classList.remove('selected'));
     selected.clear();
     selected.add(slot);
-    document.querySelectorAll('.label-slot.selected')
-      .forEach(x => x.classList.remove('selected'));
     const el = document.querySelector(`.label-slot[data-slot="${slot}"]`);
     if (el) el.classList.add('selected');
   }
@@ -1081,8 +1024,10 @@ function handleKeydown(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !inField) {
     e.preventDefault();
     selected.clear();
-    artworks.forEach((_, i) => selected.add(i));
-    document.querySelectorAll('.label-slot.filled').forEach(el => el.classList.add('selected'));
+    artworks.forEach((_, i) => {
+      selected.add(i);
+      document.querySelector(`.label-slot[data-slot="${i}"]`)?.classList.add('selected');
+    });
     updateMergeBar();
   }
 
@@ -1100,7 +1045,7 @@ function handleKeydown(e) {
     const dir  = (e.key === 'ArrowUp' || e.key === 'ArrowLeft') ? -step : step;
     const newSlot = selectedSlot + dir;
     if (newSlot >= 0 && newSlot < artworks.length) {
-      document.querySelectorAll('.label-slot.selected').forEach(x => x.classList.remove('selected'));
+      document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`)?.classList.remove('selected');
       selected.clear();
       selected.add(newSlot);
       selectedSlot = newSlot;
@@ -1555,6 +1500,101 @@ function addFromSearch(rawId) {
   refreshSearchResults();
 }
 
+// ── Delegerade scaler-events (en uppsättning lyssnare för alla skyltar) ──────
+function bindScalerEvents() {
+  const scaler = $('page-scaler');
+
+  scaler.addEventListener('click', e => {
+    const slotEl = e.target.closest('.label-slot');
+    if (!slotEl) {
+      // Klick på bakgrunden – avmarkera och rensa sökning
+      closePopover();
+      if (searchTerm) {
+        searchTerm = '';
+        const si = $('search-input');
+        if (si) si.value = '';
+        renderPages();
+      }
+      return;
+    }
+    if (slotEl.classList.contains('empty')) {
+      if ($('edit-popover').style.display !== 'none') { closePopover(false); return; }
+      addManual();
+    } else {
+      if ($('edit-popover').style.display !== 'none') { closePopover(false); return; }
+      selectSlot(parseInt(slotEl.dataset.slot), slotEl, e);
+    }
+  });
+
+  scaler.addEventListener('dblclick', e => {
+    const slotEl = e.target.closest('.label-slot.filled');
+    if (!slotEl) return;
+    openPopover(parseInt(slotEl.dataset.slot), slotEl);
+  });
+
+  scaler.addEventListener('contextmenu', e => {
+    const slotEl = e.target.closest('.label-slot.filled');
+    if (!slotEl) return;
+    showCtxMenu(e, parseInt(slotEl.dataset.slot));
+  });
+
+  scaler.addEventListener('dragstart', e => {
+    const slotEl = e.target.closest('.label-slot.filled');
+    if (!slotEl) return;
+    dragSrc = parseInt(slotEl.dataset.slot);
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => slotEl.classList.add('dragging'), 0);
+  });
+
+  scaler.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (dragSrc === null) return;
+    const slotEl = e.target.closest('.label-slot.filled');
+    if (!slotEl || parseInt(slotEl.dataset.slot) === dragSrc) return;
+    if (slotEl !== lastDragOverEl) {
+      if (lastDragOverEl) lastDragOverEl.classList.remove('drag-over');
+      slotEl.classList.add('drag-over');
+      lastDragOverEl = slotEl;
+    }
+  });
+
+  scaler.addEventListener('dragleave', e => {
+    if (lastDragOverEl && !scaler.contains(e.relatedTarget)) {
+      lastDragOverEl.classList.remove('drag-over');
+      lastDragOverEl = null;
+    }
+  });
+
+  scaler.addEventListener('dragend', e => {
+    e.target.closest('.label-slot')?.classList.remove('dragging');
+    if (lastDragOverEl) { lastDragOverEl.classList.remove('drag-over'); lastDragOverEl = null; }
+    dragSrc = null;
+  });
+
+  scaler.addEventListener('drop', e => {
+    e.preventDefault();
+    const slotEl = e.target.closest('.label-slot.filled');
+    if (!slotEl || dragSrc === null) return;
+    const slot = parseInt(slotEl.dataset.slot);
+    if (slot === dragSrc) return;
+    if (lastDragOverEl) { lastDragOverEl.classList.remove('drag-over'); lastDragOverEl = null; }
+    pushHistory();
+    const insertAt = slot > dragSrc ? slot - 1 : slot;
+    const [item] = artworks.splice(dragSrc, 1);
+    artworks.splice(insertAt, 0, item);
+    selectedSlot = null;
+    dragSrc = null;
+    renderPages();
+    closePopover();
+    saveSession();
+    const landEl = document.querySelector(`.label-slot[data-slot="${insertAt}"]`);
+    if (landEl) {
+      landEl.classList.add('just-dropped');
+      landEl.addEventListener('animationend', () => landEl.classList.remove('just-dropped'), { once: true });
+    }
+  });
+}
+
 // ── Spinner keyframe ──────────────────────────────────────────────────────────
 (function injectSpinnerCSS() {
   const style = document.createElement('style');
@@ -1680,18 +1720,8 @@ async function init() {
     }
   });
 
-  // Klick på sidan bakgrund avmarkerar allt
-  $('page-scaler')?.addEventListener('click', e => {
-    if (!e.target.closest('.label-slot')) {
-      closePopover();
-      if (searchTerm) {
-        searchTerm = '';
-        const si = $('search-input');
-        if (si) si.value = '';
-        renderPages();
-      }
-    }
-  });
+  // Delegerade events för alla label-slots (en gång, inte per skylt)
+  bindScalerEvents();
 
   // Refit pages on resize (debounced)
   let _resizeDebounce = null;
