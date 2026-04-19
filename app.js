@@ -36,10 +36,11 @@ const FIELD_META = [
 const MULTILINE_FIELDS = new Set(['creator', 'title', 'artform']);
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let artworks   = [];          // Array<{ id, creator, title, artform, created }>
-let selected   = new Set();   // Indexes i artworks som är markerade (legacy, kept for ctx menu compat)
-let history    = [];          // Undo-stack (JSON-snapshots)
-let searchTerm = '';
+let artworks    = [];          // Array<{ id, creator, title, artform, created }>
+let selected    = new Set();   // Indexes i artworks som är markerade (legacy, kept for ctx menu compat)
+let history     = [];          // Undo-stack (JSON-snapshots)
+let searchTerm  = '';
+let projectName = '';
 let logoBytes  = null;        // Uint8Array med PNG-data
 let editingIdx = -1;
 let addingNew  = false;       // true när modal öppnades via "Lägg till manuellt"
@@ -113,6 +114,12 @@ function loadSession() {
     const d = localStorage.getItem('vgr_konstskylt');
     if (d) artworks = JSON.parse(d);
   } catch { }
+}
+function saveProjectName() {
+  try { localStorage.setItem('vgr_konstskylt_project', projectName); } catch { }
+}
+function loadProjectName() {
+  try { projectName = localStorage.getItem('vgr_konstskylt_project') || ''; } catch { }
 }
 
 // ── Användarinställningar ─────────────────────────────────────────────────────
@@ -364,7 +371,8 @@ function renderPages() {
     label.textContent = `${artworks.length} konstverk${pageLabel}`;
   }
 
-  document.title = `${artworks.length} konstverk · VGR Konstskylt`;
+  const projPart = projectName ? `${projectName} · ` : '';
+  document.title = `${projPart}${artworks.length} konstverk · VGR Konstskylt`;
 }
 
 function createLabelEl(slot, aw) {
@@ -837,12 +845,14 @@ async function splitSelected(idx) {
 // ── Export / Import ───────────────────────────────────────────────────────────
 function exportList() {
   if (!artworks.length) { showToast('Listan är tom — inget att exportera.', 'error'); return; }
-  const ts   = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
-  const json = JSON.stringify(artworks, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement('a'), {
-    href: url, download: `vgr_skyltar_${ts}.json`,
+  const ts      = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+  const proj    = projectName ? projectName.replace(/[^a-zA-Z0-9åäöÅÄÖ]+/g, '_').replace(/^_|_$/g, '') + '_' : '';
+  const payload = { projectName, artworks };
+  const json    = JSON.stringify(payload, null, 2);
+  const blob    = new Blob([json], { type: 'application/json' });
+  const url     = URL.createObjectURL(blob);
+  const a       = Object.assign(document.createElement('a'), {
+    href: url, download: `vgr_${proj}${ts}.json`,
   });
   a.click();
   URL.revokeObjectURL(url);
@@ -855,12 +865,20 @@ function importList(e) {
   const reader = new FileReader();
   reader.onload = ev => {
     try {
-      const parsed = JSON.parse(ev.target.result);
-      if (!Array.isArray(parsed)) throw new Error('Ogiltigt format');
+      const raw    = JSON.parse(ev.target.result);
+      // Stöd både gammalt format (array) och nytt format ({ projectName, artworks })
+      const parsed = Array.isArray(raw) ? raw : (Array.isArray(raw.artworks) ? raw.artworks : null);
+      if (!parsed) throw new Error('Ogiltigt format');
       if (artworks.length && !confirm(
         `Importera ${parsed.length} konstverk?\n\nDen nuvarande listan (${artworks.length} konstverk) ersätts. Du kan ångra med Ctrl/Cmd+Z.`
       )) return;
       pushHistory();
+      if (!Array.isArray(raw) && raw.projectName) {
+        projectName = raw.projectName;
+        const inp = $('project-name');
+        if (inp) inp.value = projectName;
+        saveProjectName();
+      }
       artworks = parsed.map(a => ({
         id:       String(a.id      || ''),
         creator:  String(a.creator || ''),
@@ -953,16 +971,58 @@ async function pasteClipboard() {
 function loadFile(e) {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const area = $('vg-input');
-    const cur  = area.value.trim();
-    const text = ev.target.result.trim();
-    area.value = cur ? cur + '\n' + text : text;
-    showToast(`Fil inläst: ${file.name}`, 'info');
-    if (settings.autoFetchOnPaste) fetchAll();
-  };
-  reader.readAsText(file, 'UTF-8');
+  const isExcel = /\.(xlsx|xls|ods)$/i.test(file.name);
+
+  if (isExcel) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb  = XLSX.read(ev.target.result, { type: 'array' });
+        const ws  = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        // Plocka ut alla celler som matchar VG-nummermönstret
+        const vgNums = [];
+        const seen   = new Set();
+        for (const row of rows) {
+          for (const cell of row) {
+            const str = String(cell).trim();
+            const matches = [...str.matchAll(/\bVG[-]?(\d+)\b|\b(\d{3,6})\b/gi)];
+            for (const m of matches) {
+              const digits = (m[1] || m[2]).replace(/^0+/, '') || '0';
+              const norm   = 'VG' + digits;
+              if (!seen.has(norm)) { seen.add(norm); vgNums.push(norm); }
+            }
+          }
+        }
+
+        if (!vgNums.length) {
+          showToast('Inga VG-nummer hittades i filen.', 'error');
+          return;
+        }
+
+        const area = $('vg-input');
+        const cur  = area.value.trim();
+        area.value = cur ? cur + '\n' + vgNums.join('\n') : vgNums.join('\n');
+        showToast(`${vgNums.length} VG-nummer inlästa från ${file.name}.`, 'success');
+        if (settings.autoFetchOnPaste) fetchAll();
+      } catch {
+        showToast('Kunde inte läsa Excel-filen.', 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const area = $('vg-input');
+      const cur  = area.value.trim();
+      const text = ev.target.result.trim();
+      area.value = cur ? cur + '\n' + text : text;
+      showToast(`Fil inläst: ${file.name}`, 'info');
+      if (settings.autoFetchOnPaste) fetchAll();
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
   e.target.value = '';
 }
 
@@ -1204,10 +1264,24 @@ async function buildPDF() {
   };
 
   // Bygg sidor
+  const totalPages = Math.ceil(artworks.length / AVERY.perPage);
   let page = null;
   for (let i = 0; i < artworks.length; i++) {
     const slot = i % AVERY.perPage;
-    if (slot === 0) page = doc.addPage([A4_W, A4_H]);
+    if (slot === 0) {
+      page = doc.addPage([A4_W, A4_H]);
+      // Sidfot med projektnamn och sidnummer
+      if (projectName || totalPages > 1) {
+        const pageNum  = Math.floor(i / AVERY.perPage) + 1;
+        const footParts = [];
+        if (projectName) footParts.push(projectName);
+        if (totalPages > 1) footParts.push(`Sida ${pageNum} av ${totalPages}`);
+        page.drawText(footParts.join('  ·  '), {
+          x: AVERY.left, y: 6 * MM,
+          font: fontReg, size: 7, color: rgb(0.55, 0.55, 0.55),
+        });
+      }
+    }
 
     const col   = slot % AVERY.cols;
     const row   = Math.floor(slot / AVERY.cols);
@@ -1289,6 +1363,18 @@ function resetSettingsForm() {
 async function init() {
   loadSettings();
   loadSession();
+  loadProjectName();
+
+  const projInp = $('project-name');
+  if (projInp) {
+    projInp.value = projectName;
+    projInp.addEventListener('input', e => {
+      projectName = e.target.value;
+      saveProjectName();
+      renderPages();
+    });
+  }
+
   renderPages();
   await loadLogo();
 

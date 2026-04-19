@@ -50,6 +50,13 @@
     <!-- ── Sidebar ── -->
     <aside class="sidebar">
       <div class="sidebar-section">
+        <label class="sidebar-label" for="project-name">Projektnamn</label>
+        <input id="project-name" class="project-name-input" type="text" placeholder="t.ex. Kulturhuset Göteborg 2026" spellcheck="false">
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section">
         <div class="sidebar-label-row">
           <label class="sidebar-label" for="vg-input">VG-nummer</label>
           <div class="sidebar-label-actions">
@@ -65,7 +72,7 @@
           spellcheck="false"
         ></textarea>
 
-        <input type="file" id="file-input" accept=".txt,.csv" style="display:none">
+        <input type="file" id="file-input" accept=".txt,.csv,.xlsx,.xls,.ods" style="display:none">
 
         <div id="progress-wrap" class="progress-wrap" style="display:none">
           <div id="progress-fill" class="progress-fill"></div>
@@ -274,6 +281,7 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
