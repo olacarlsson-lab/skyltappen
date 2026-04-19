@@ -1,6 +1,7 @@
 'use strict';
 
-const CACHE = 'vgr-konstskylt-v1';
+// Bumpa versionen vid varje deploy för att tvinga cache-rensning
+const CACHE = 'vgr-konstskylt-20260419';
 
 const PRECACHE = [
   '/',
@@ -8,10 +9,13 @@ const PRECACHE = [
   '/app.js',
   '/style.css',
   '/icon.svg',
+  '/manifest.json',
   '/vgr_logo.png',
   '/vgr_logo_cropped.png',
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
   'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js',
+  'https://unpkg.com/xlsx/dist/xlsx.full.min.js',
+  'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js',
 ];
 
 self.addEventListener('install', e => {
@@ -31,7 +35,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Låt API-anrop alltid gå mot nätverket (med cache-fallback om offline)
+  // API-anrop alltid mot nätverket (med cache-fallback om offline)
   if (e.request.url.includes('entryscape.net')) {
     e.respondWith(
       fetch(e.request).catch(() => caches.match(e.request))
