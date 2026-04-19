@@ -1361,6 +1361,162 @@ async function generatePDF() {
   }
 }
 
+// ── Konstverk-sök ────────────────────────────────────────────────────────────
+let artworkIndex  = null;
+let fuseInstance  = null;
+let indexLoading  = false;
+
+function openArtworkSearch() {
+  $('artwork-search-overlay').classList.add('open');
+  $('artwork-search-input').focus();
+  if (!artworkIndex && !indexLoading) loadArtworkIndex();
+}
+
+function closeArtworkSearch() {
+  $('artwork-search-overlay').classList.remove('open');
+}
+
+async function loadArtworkIndex() {
+  indexLoading = true;
+  try {
+    const cached = sessionStorage.getItem('vgr_search_index');
+    if (cached) {
+      artworkIndex = JSON.parse(cached);
+      buildFuse();
+      setSearchLoadState(null);
+      refreshSearchResults();
+      return;
+    }
+  } catch { }
+
+  const LIMIT       = 500;
+  const CONCURRENCY = 5;
+
+  setSearchLoadState('Laddar konstverk…', 0);
+
+  try {
+    const first = await fetch(`${API_URL}?_limit=${LIMIT}&_offset=0`).then(r => r.json());
+    let all     = first.results || [];
+    const total = first.resultCount || all.length;
+
+    const queue = [];
+    for (let off = LIMIT; off < total; off += LIMIT) {
+      queue.push(`${API_URL}?_limit=${LIMIT}&_offset=${off}`);
+    }
+
+    const totalBatches = Math.ceil(total / LIMIT) || 1;
+    let done = 1;
+
+    async function worker() {
+      while (queue.length) {
+        const url  = queue.shift();
+        const data = await fetch(url).then(r => r.json());
+        if (data.results) all.push(...data.results);
+        done++;
+        setSearchLoadState(`Laddar… ${Math.round(done / totalBatches * 100)} %`, done / totalBatches);
+      }
+    }
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
+    artworkIndex = all;
+    buildFuse();
+    setSearchLoadState(null);
+    refreshSearchResults();
+
+    try { sessionStorage.setItem('vgr_search_index', JSON.stringify(all)); } catch { }
+  } catch (e) {
+    setSearchLoadState('Kunde inte ladda register: ' + e.message);
+  } finally {
+    indexLoading = false;
+  }
+}
+
+function buildFuse() {
+  fuseInstance = new Fuse(artworkIndex, {
+    includeScore:   true,
+    threshold:      0.35,
+    ignoreLocation: true,
+    keys: ['creator', 'title'],
+  });
+}
+
+function setSearchLoadState(msg, progress) {
+  const wrap = $('search-load-wrap');
+  if (!msg) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  $('search-load-text').textContent = msg;
+  const bar = $('search-load-bar');
+  if (progress != null) bar.style.width = `${Math.round(progress * 100)}%`;
+}
+
+let _searchDebounce = null;
+function onArtworkSearchInput() {
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(refreshSearchResults, 180);
+}
+
+function refreshSearchResults() {
+  const list  = $('search-results-list');
+  const query = ($('artwork-search-input')?.value || '').trim();
+  if (!list) return;
+
+  if (!query) {
+    list.innerHTML = '<p class="search-hint-text">Börja skriva för att söka på konstnär eller titel.</p>';
+    return;
+  }
+  if (!fuseInstance) {
+    list.innerHTML = '<p class="search-hint-text">Laddar register, försök igen om ett ögonblick…</p>';
+    return;
+  }
+
+  const hits = fuseInstance.search(query, { limit: 50 });
+  if (!hits.length) {
+    list.innerHTML = '<p class="search-hint-text">Inga träffar.</p>';
+    return;
+  }
+
+  const existingIds = new Set(artworks.map(a => (a.id || '').toUpperCase()));
+
+  list.innerHTML = hits.map(({ item }) => {
+    const id      = String(item.id || '').trim();
+    const already = existingIds.has(id.toUpperCase());
+    const meta    = [item.artform, item.created, id].filter(Boolean).join(' · ');
+    return `<div class="search-result-item${already ? ' search-result-item--added' : ''}">
+      <div class="search-result-info">
+        <span class="search-result-creator">${esc(item.creator || '–')}</span>
+        <span class="search-result-title">${esc(item.title || '–')}</span>
+        <span class="search-result-meta">${esc(meta)}</span>
+      </div>
+      <button class="btn btn-sm ${already ? 'btn-ghost' : 'btn-primary'} search-add-btn"
+        ${already ? 'disabled' : ''}
+        data-id="${esc(id)}">
+        ${already ? 'Tillagd' : 'Lägg till'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function addFromSearch(rawId) {
+  const item = artworkIndex?.find(r => String(r.id || '').trim().toUpperCase() === rawId.toUpperCase());
+  if (!item) return;
+  if (artworks.some(a => (a.id || '').toUpperCase() === rawId.toUpperCase())) return;
+
+  pushHistory();
+  artworks.push({
+    id:       String(item.id      || '').trim(),
+    creator:  String(item.creator || '').trim(),
+    title:    String(item.title   || '').trim(),
+    artform:  String(item.artform || '').trim(),
+    created:  String(item.created || '').trim(),
+    sizeStep: 0,
+  });
+  renderPages();
+  saveSession();
+  showToast(`${item.creator || rawId} tillagd.`, 'success');
+  refreshSearchResults();
+}
+
 // ── Spinner keyframe ──────────────────────────────────────────────────────────
 (function injectSpinnerCSS() {
   const style = document.createElement('style');
@@ -1390,6 +1546,18 @@ async function init() {
   $('btn-import')  .addEventListener('click', () => $('import-input').click());
   $('import-input').addEventListener('change', importList);
   $('btn-print')   .addEventListener('click', printLabels);
+  $('btn-search')  .addEventListener('click', openArtworkSearch);
+
+  // Artwork search modal
+  $('artwork-search-close').addEventListener('click', closeArtworkSearch);
+  $('artwork-search-overlay').addEventListener('click', e => {
+    if (e.target === $('artwork-search-overlay')) closeArtworkSearch();
+  });
+  $('artwork-search-input').addEventListener('input', onArtworkSearchInput);
+  $('search-results-list').addEventListener('click', e => {
+    const btn = e.target.closest('.search-add-btn');
+    if (btn && !btn.disabled) addFromSearch(btn.dataset.id);
+  });
 
   // Sort
   $('sort-select').addEventListener('change', e => {
