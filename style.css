@@ -1253,18 +1253,6 @@ body {
   font-size: 12px;
   color: var(--text-faint);
 }
-.btn-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font-family: inherit;
-  font-size: 12px;
-  color: var(--teal);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.btn-link:hover { color: var(--teal-dark); }
 
 .btn-sm {
   font-size: 12px;

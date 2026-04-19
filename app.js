@@ -1450,10 +1450,9 @@ function buildFuse() {
 function showCacheAge(ts) {
   const row = $('search-cache-row');
   if (!row) return;
-  const mins  = Math.round((Date.now() - ts) / 60000);
-  const label = mins < 2 ? 'Just nu' : mins < 60 ? `${mins} min sedan` :
-                mins < 1440 ? `${Math.round(mins / 60)} h sedan` : `${Math.round(mins / 1440)} d sedan`;
-  $('search-cache-age').textContent = `Uppdaterat: ${label}.`;
+  const d = new Date(ts);
+  const dateStr = d.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
+  $('search-cache-age').textContent = `Databasen inläst ${dateStr}`;
   row.hidden = false;
 }
 
