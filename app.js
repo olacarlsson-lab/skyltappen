@@ -1379,13 +1379,17 @@ function closeArtworkSearch() {
 async function loadArtworkIndex() {
   indexLoading = true;
   try {
-    const cached = sessionStorage.getItem('vgr_search_index');
-    if (cached) {
-      artworkIndex = JSON.parse(cached);
-      buildFuse();
-      setSearchLoadState(null);
-      refreshSearchResults();
-      return;
+    const raw = localStorage.getItem('vgr_search_index');
+    if (raw) {
+      const { ts, data } = JSON.parse(raw);
+      if (Date.now() - ts < 24 * 60 * 60 * 1000) {
+        artworkIndex = data;
+        buildFuse();
+        setSearchLoadState(null);
+        showCacheAge(ts);
+        refreshSearchResults();
+        return;
+      }
     }
   } catch { }
 
@@ -1424,7 +1428,9 @@ async function loadArtworkIndex() {
     setSearchLoadState(null);
     refreshSearchResults();
 
-    try { sessionStorage.setItem('vgr_search_index', JSON.stringify(all)); } catch { }
+    const ts = Date.now();
+    try { localStorage.setItem('vgr_search_index', JSON.stringify({ ts, data: all })); } catch { }
+    showCacheAge(ts);
   } catch (e) {
     setSearchLoadState('Kunde inte ladda register: ' + e.message);
   } finally {
@@ -1439,6 +1445,24 @@ function buildFuse() {
     ignoreLocation: true,
     keys: ['creator', 'title'],
   });
+}
+
+function showCacheAge(ts) {
+  const row = $('search-cache-row');
+  if (!row) return;
+  const d = new Date(ts);
+  const dateStr = d.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
+  $('search-cache-age').textContent = `Databasen inläst ${dateStr}`;
+  row.hidden = false;
+}
+
+async function refreshArtworkIndex() {
+  localStorage.removeItem('vgr_search_index');
+  artworkIndex  = null;
+  fuseInstance  = null;
+  indexLoading  = false;
+  $('search-cache-row').hidden = true;
+  await loadArtworkIndex();
 }
 
 function setSearchLoadState(msg, progress) {
@@ -1513,7 +1537,7 @@ function addFromSearch(rawId) {
   });
   renderPages();
   saveSession();
-  showToast(`${item.creator || rawId} tillagd.`, 'success');
+  showToast(`${rawId} – ${item.title || item.creator} tillagd.`, 'success');
   refreshSearchResults();
 }
 
@@ -1554,6 +1578,7 @@ async function init() {
     if (e.target === $('artwork-search-overlay')) closeArtworkSearch();
   });
   $('artwork-search-input').addEventListener('input', onArtworkSearchInput);
+  $('search-refresh-btn') .addEventListener('click', refreshArtworkIndex);
   $('search-results-list').addEventListener('click', e => {
     const btn = e.target.closest('.search-add-btn');
     if (btn && !btn.disabled) addFromSearch(btn.dataset.id);
