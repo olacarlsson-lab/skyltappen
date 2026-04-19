@@ -1054,6 +1054,23 @@ function handleKeydown(e) {
     }
   }
 
+  // Pilar utan modifier — navigera mellan skyltar
+  if (!inField && !e.altKey && !e.ctrlKey && !e.metaKey && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && selectedSlot !== null) {
+    e.preventDefault();
+    const step = (e.key === 'ArrowUp' || e.key === 'ArrowDown') ? 2 : 1;
+    const dir  = (e.key === 'ArrowUp' || e.key === 'ArrowLeft') ? -step : step;
+    const newSlot = selectedSlot + dir;
+    if (newSlot >= 0 && newSlot < artworks.length) {
+      document.querySelectorAll('.label-slot.selected').forEach(x => x.classList.remove('selected'));
+      selected.clear();
+      selected.add(newSlot);
+      selectedSlot = newSlot;
+      const newEl = document.querySelector(`.label-slot[data-slot="${newSlot}"]`);
+      if (newEl) newEl.classList.add('selected');
+      newEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
   // Alt+pilar — flytta vald skylt (↑/↓ = en rad = 2 steg, ←/→ = ett steg)
   if (!inField && e.altKey && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && selectedSlot !== null) {
     e.preventDefault();
