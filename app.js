@@ -1379,13 +1379,16 @@ function closeArtworkSearch() {
 async function loadArtworkIndex() {
   indexLoading = true;
   try {
-    const cached = sessionStorage.getItem('vgr_search_index');
-    if (cached) {
-      artworkIndex = JSON.parse(cached);
-      buildFuse();
-      setSearchLoadState(null);
-      refreshSearchResults();
-      return;
+    const raw = localStorage.getItem('vgr_search_index');
+    if (raw) {
+      const { ts, data } = JSON.parse(raw);
+      if (Date.now() - ts < 24 * 60 * 60 * 1000) {
+        artworkIndex = data;
+        buildFuse();
+        setSearchLoadState(null);
+        refreshSearchResults();
+        return;
+      }
     }
   } catch { }
 
@@ -1424,7 +1427,7 @@ async function loadArtworkIndex() {
     setSearchLoadState(null);
     refreshSearchResults();
 
-    try { sessionStorage.setItem('vgr_search_index', JSON.stringify(all)); } catch { }
+    try { localStorage.setItem('vgr_search_index', JSON.stringify({ ts: Date.now(), data: all })); } catch { }
   } catch (e) {
     setSearchLoadState('Kunde inte ladda register: ' + e.message);
   } finally {
