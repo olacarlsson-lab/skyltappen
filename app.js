@@ -1386,6 +1386,7 @@ async function loadArtworkIndex() {
         artworkIndex = data;
         buildFuse();
         setSearchLoadState(null);
+        showCacheAge(ts);
         refreshSearchResults();
         return;
       }
@@ -1427,7 +1428,9 @@ async function loadArtworkIndex() {
     setSearchLoadState(null);
     refreshSearchResults();
 
-    try { localStorage.setItem('vgr_search_index', JSON.stringify({ ts: Date.now(), data: all })); } catch { }
+    const ts = Date.now();
+    try { localStorage.setItem('vgr_search_index', JSON.stringify({ ts, data: all })); } catch { }
+    showCacheAge(ts);
   } catch (e) {
     setSearchLoadState('Kunde inte ladda register: ' + e.message);
   } finally {
@@ -1442,6 +1445,25 @@ function buildFuse() {
     ignoreLocation: true,
     keys: ['creator', 'title'],
   });
+}
+
+function showCacheAge(ts) {
+  const row = $('search-cache-row');
+  if (!row) return;
+  const mins  = Math.round((Date.now() - ts) / 60000);
+  const label = mins < 2 ? 'Just nu' : mins < 60 ? `${mins} min sedan` :
+                mins < 1440 ? `${Math.round(mins / 60)} h sedan` : `${Math.round(mins / 1440)} d sedan`;
+  $('search-cache-age').textContent = `Uppdaterat: ${label}.`;
+  row.hidden = false;
+}
+
+async function refreshArtworkIndex() {
+  localStorage.removeItem('vgr_search_index');
+  artworkIndex  = null;
+  fuseInstance  = null;
+  indexLoading  = false;
+  $('search-cache-row').hidden = true;
+  await loadArtworkIndex();
 }
 
 function setSearchLoadState(msg, progress) {
@@ -1557,6 +1579,7 @@ async function init() {
     if (e.target === $('artwork-search-overlay')) closeArtworkSearch();
   });
   $('artwork-search-input').addEventListener('input', onArtworkSearchInput);
+  $('search-refresh-btn') .addEventListener('click', refreshArtworkIndex);
   $('search-results-list').addEventListener('click', e => {
     const btn = e.target.closest('.search-add-btn');
     if (btn && !btn.disabled) addFromSearch(btn.dataset.id);
