@@ -433,7 +433,6 @@ body {
 .label-slot.filled.selected {
   border: 2px solid var(--teal);
   box-shadow: 0 0 0 4px var(--teal-light), 0 8px 24px rgba(0,91,137,0.12);
-  background: rgba(0,91,137,0.02);
   z-index: 5;
 }
 
