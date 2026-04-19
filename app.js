@@ -1504,7 +1504,15 @@ async function init() {
 
   // Klick på sidan bakgrund avmarkerar allt
   $('page-scaler')?.addEventListener('click', e => {
-    if (!e.target.closest('.label-slot')) closePopover();
+    if (!e.target.closest('.label-slot')) {
+      closePopover();
+      if (searchTerm) {
+        searchTerm = '';
+        const si = $('search-input');
+        if (si) si.value = '';
+        renderPages();
+      }
+    }
   });
 
   // Refit pages on resize
