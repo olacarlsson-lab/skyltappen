@@ -741,7 +741,6 @@ function addManual() {
   artworks.push({ id: '', creator: '', title: '', artform: '', created: '' });
   selected.clear();
   selected.add(artworks.length - 1);
-  renderPages();
   openEdit(artworks.length - 1);
 }
 
