@@ -428,8 +428,7 @@ body {
 }
 .label-slot.filled:hover {
   border-color: var(--teal);
-  background: linear-gradient(180deg, rgba(0,91,137,0.01), rgba(0,91,137,0.04));
-  box-shadow: 0 4px 16px rgba(0,91,137,0.08);
+  box-shadow: 0 4px 16px rgba(0,91,137,0.12);
 }
 .label-slot.filled.selected {
   border: 2px solid var(--teal);
