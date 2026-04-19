@@ -122,24 +122,13 @@ function loadProjectName() {
   try { projectName = localStorage.getItem('vgr_konstskylt_project') || ''; } catch { }
 }
 
-// ── Användarinställningar ─────────────────────────────────────────────────────
-const DEFAULT_SETTINGS = {
+// ── Inställningar (fasta värden) ──────────────────────────────────────────────
+const settings = {
   confirmClear:     true,
   autoFetchOnPaste: false,
   maxUndo:          20,
   minFontScale:     0.60,
 };
-let settings = { ...DEFAULT_SETTINGS };
-
-function loadSettings() {
-  try {
-    const d = localStorage.getItem('vgr_konstskylt_settings');
-    if (d) settings = { ...DEFAULT_SETTINGS, ...JSON.parse(d) };
-  } catch { }
-}
-function saveSettings() {
-  try { localStorage.setItem('vgr_konstskylt_settings', JSON.stringify(settings)); } catch { }
-}
 
 // ── Undo ──────────────────────────────────────────────────────────────────────
 function pushHistory() {
@@ -294,14 +283,43 @@ function renderPages() {
   if (!artworks.length) {
     label.textContent = '0 konstverk';
     scaler.innerHTML = `<div class="wysiwyg-empty">
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
-        <rect x="6" y="14" width="60" height="44" rx="4" stroke="#D1D5DB" stroke-width="2" fill="#F9FAFB"/>
-        <rect x="14" y="22" width="44" height="20" rx="2" stroke="#E5E7EB" stroke-width="1.5" fill="white"/>
-        <line x1="14" y1="48" x2="36" y2="48" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round"/>
-        <line x1="14" y1="53" x2="26" y2="53" stroke="#E5E7EB" stroke-width="1.5" stroke-linecap="round"/>
+      <svg class="wysiwyg-empty-icon" width="56" height="56" viewBox="0 0 56 56" fill="none">
+        <rect x="4" y="10" width="48" height="36" rx="4" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.15"/>
+        <rect x="10" y="16" width="36" height="16" rx="2" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.25"/>
+        <line x1="10" y1="38" x2="30" y2="38" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+        <line x1="10" y1="43" x2="20" y2="43" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.2"/>
       </svg>
-      <h2>Inga konstverk ännu</h2>
-      <p>Ange VG-nummer i panelen till vänster och klicka "Hämta data".</p>
+      <h2>Kom igång</h2>
+      <ol class="tutorial-steps">
+        <li>
+          <span class="tutorial-step-num">1</span>
+          <div>
+            <strong>Ange VG-nummer</strong>
+            <p>Skriv VG-nummer i textfältet till vänster, ett per rad. Du kan också ladda från fil eller urklipp.</p>
+          </div>
+        </li>
+        <li>
+          <span class="tutorial-step-num">2</span>
+          <div>
+            <strong>Hämta data</strong>
+            <p>Klicka "Hämta data" för att ladda konstverksinformation automatiskt.</p>
+          </div>
+        </li>
+        <li>
+          <span class="tutorial-step-num">3</span>
+          <div>
+            <strong>Redigera skyltar</strong>
+            <p>Klicka på en skylt för att redigera konstnär, titel, konsttyp och år direkt.</p>
+          </div>
+        </li>
+        <li>
+          <span class="tutorial-step-num">4</span>
+          <div>
+            <strong>Generera PDF</strong>
+            <p>Klicka "Generera PDF" i menyn ovan – färdig för utskrift på Avery C32010.</p>
+          </div>
+        </li>
+      </ol>
     </div>`;
     return;
   }
@@ -1336,42 +1354,6 @@ async function generatePDF() {
   }
 }
 
-// ── Settings modal ────────────────────────────────────────────────────────────
-function openSettings() {
-  $('set-confirm-clear').checked = settings.confirmClear;
-  $('set-auto-fetch')   .checked = settings.autoFetchOnPaste;
-  $('set-max-undo')     .value   = settings.maxUndo;
-  $('set-min-scale')    .value   = settings.minFontScale.toFixed(2);
-  $('settings-overlay').classList.add('open');
-}
-function closeSettings() {
-  $('settings-overlay').classList.remove('open');
-}
-function applySettingsFromForm() {
-  const rawUndo = parseInt($('set-max-undo').value, 10);
-  const undo    = Number.isFinite(rawUndo) ? Math.min(100, Math.max(5, rawUndo)) : DEFAULT_SETTINGS.maxUndo;
-  const scale   = parseFloat($('set-min-scale').value);
-
-  settings = {
-    confirmClear:     $('set-confirm-clear').checked,
-    autoFetchOnPaste: $('set-auto-fetch').checked,
-    maxUndo:          undo,
-    minFontScale:     Number.isFinite(scale) ? scale : DEFAULT_SETTINGS.minFontScale,
-  };
-  saveSettings();
-
-  while (history.length > settings.maxUndo) history.shift();
-
-  closeSettings();
-  showToast('Inställningar sparade.', 'success');
-}
-function resetSettingsForm() {
-  $('set-confirm-clear').checked = DEFAULT_SETTINGS.confirmClear;
-  $('set-auto-fetch')   .checked = DEFAULT_SETTINGS.autoFetchOnPaste;
-  $('set-max-undo')     .value   = DEFAULT_SETTINGS.maxUndo;
-  $('set-min-scale')    .value   = DEFAULT_SETTINGS.minFontScale.toFixed(2);
-}
-
 // ── Spinner keyframe ──────────────────────────────────────────────────────────
 (function injectSpinnerCSS() {
   const style = document.createElement('style');
@@ -1381,19 +1363,8 @@ function resetSettingsForm() {
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
-  loadSettings();
   loadSession();
   loadProjectName();
-
-  const projInp = $('project-name');
-  if (projInp) {
-    projInp.value = projectName;
-    projInp.addEventListener('input', e => {
-      projectName = e.target.value;
-      saveProjectName();
-      renderPages();
-    });
-  }
 
   renderPages();
   await loadLogo();
@@ -1408,7 +1379,6 @@ async function init() {
   // Header buttons
   $('btn-clear')   .addEventListener('click', clearAll);
   $('btn-generate').addEventListener('click', generatePDF);
-  $('btn-settings').addEventListener('click', openSettings);
   $('btn-export')  .addEventListener('click', exportList);
   $('btn-import')  .addEventListener('click', () => $('import-input').click());
   $('import-input').addEventListener('change', importList);
@@ -1421,14 +1391,6 @@ async function init() {
     const [key, dir] = val.split('-');
     sortArtworks(key, dir === 'asc' ? 1 : -1);
     // Behåll valt alternativ som indikation på aktiv sortering
-  });
-
-  // Settings modal
-  $('settings-close').addEventListener('click', closeSettings);
-  $('settings-save') .addEventListener('click', applySettingsFromForm);
-  $('settings-reset').addEventListener('click', resetSettingsForm);
-  $('settings-overlay').addEventListener('click', e => {
-    if (e.target === $('settings-overlay')) closeSettings();
   });
 
   // Search
