@@ -830,6 +830,10 @@ async function splitSelected(idx) {
 // ── Export / Import ───────────────────────────────────────────────────────────
 function exportList() {
   if (!artworks.length) { showToast('Listan är tom — inget att exportera.', 'error'); return; }
+  const name = prompt('Namn på exporten (valfritt):', projectName || '');
+  if (name === null) return;
+  projectName = name.trim();
+  saveProjectName();
   const ts      = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
   const proj    = projectName ? projectName.replace(/[^a-zA-Z0-9åäöÅÄÖ]+/g, '_').replace(/^_|_$/g, '') + '_' : '';
   const payload = { projectName, artworks };
@@ -1328,7 +1332,13 @@ let indexLoading  = false;
 function openArtworkSearch() {
   $('artwork-search-overlay').classList.add('open');
   $('artwork-search-input').focus();
-  if (!artworkIndex && !indexLoading) loadArtworkIndex();
+  if (!artworkIndex && !indexLoading) {
+    $('search-results-list').innerHTML = '<p class="search-hint-text">Laddar register…</p>';
+    setSearchLoadState('Förbereder…', 0);
+    loadArtworkIndex();
+  } else if (!artworkIndex && indexLoading) {
+    $('search-results-list').innerHTML = '<p class="search-hint-text">Laddar register…</p>';
+  }
 }
 
 function closeArtworkSearch() {
