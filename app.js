@@ -1513,7 +1513,7 @@ function addFromSearch(rawId) {
   });
   renderPages();
   saveSession();
-  showToast(`${item.creator || rawId} tillagd.`, 'success');
+  showToast(`${rawId} – ${item.title || item.creator} tillagd.`, 'success');
   refreshSearchResults();
 }
 
