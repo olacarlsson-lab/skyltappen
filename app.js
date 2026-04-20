@@ -17,10 +17,24 @@ const AVERY = {
   perPage: 10,
 };
 
-const PAD_LEFT  = 7.5 * MM;
-const PAD_RIGHT = 5.0 * MM;
-const PAD_TOP   = 3.5 * MM;
-const PAD_BOT   = 5.0 * MM;
+const DEFAULT_MARGINS = { top: 3.5, right: 5.0, bot: 5.0, left: 7.5 };
+let margins = { ...DEFAULT_MARGINS };
+
+function loadMargins() {
+  try {
+    const d = localStorage.getItem('vgr_margins');
+    if (d) margins = { ...DEFAULT_MARGINS, ...JSON.parse(d) };
+  } catch { }
+}
+function saveMargins() {
+  try { localStorage.setItem('vgr_margins', JSON.stringify(margins)); } catch { }
+}
+const pad = () => ({
+  left:  margins.left  * MM,
+  right: margins.right * MM,
+  top:   margins.top   * MM,
+  bot:   margins.bot   * MM,
+});
 
 const A4_W = 595.28;
 const A4_H = 841.89;
@@ -427,7 +441,7 @@ function createLabelEl(slot, aw) {
 
     el.innerHTML = `
       <div class="slot-badge">${slot + 1}</div>
-      <div class="label-content">
+      <div class="label-content" style="padding:${margins.top}mm ${margins.right}mm ${margins.bot}mm ${margins.left}mm">
         <div class="label-text-area">
           ${renderMultiline(aw.creator, 'sign-creator')}
           ${renderMultiline(aw.title,   'sign-title')}
@@ -1155,8 +1169,9 @@ async function buildPDF() {
 
   /** Ritar en enskild skylt. cardX/cardY = nedre vänstra hörnet i pt. */
   const drawSign = (page, aw, cardX, cardY) => {
-    const maxW = AVERY.cardW - PAD_LEFT - PAD_RIGHT;
-    const maxH = AVERY.cardH - PAD_TOP - PAD_BOT - 8 * MM;
+    const p    = pad();
+    const maxW = AVERY.cardW - p.left - p.right;
+    const maxH = AVERY.cardH - p.top  - p.bot  - 8 * MM;
 
     const creator  = aw.creator || '';
     const title    = aw.title   || '';
@@ -1203,13 +1218,13 @@ async function buildPDF() {
 
     const { cl, tl, al, sc, st, sa, sy } = lay;
 
-    let curY = cardY + AVERY.cardH - PAD_TOP;
+    let curY = cardY + AVERY.cardH - p.top;
 
     // Konstnär
     if (cl.length) {
       curY -= sc;
       cl.forEach((line, j) => {
-        page.drawText(line, { x: cardX + PAD_LEFT, y: curY, font: fontReg, size: sc, color: black });
+        page.drawText(line, { x: cardX + p.left, y: curY, font: fontReg, size: sc, color: black });
         if (j < cl.length - 1) curY -= sc * 1.2;
       });
       curY -= 1.5 * MM;
@@ -1219,7 +1234,7 @@ async function buildPDF() {
     if (tl.length) {
       curY -= st * 1.05;
       tl.forEach((line, j) => {
-        page.drawText(line, { x: cardX + PAD_LEFT, y: curY, font: fontBold, size: st, color: black });
+        page.drawText(line, { x: cardX + p.left, y: curY, font: fontBold, size: st, color: black });
         if (j < tl.length - 1) curY -= st * 1.3;
       });
       curY -= 2.0 * MM;
@@ -1229,7 +1244,7 @@ async function buildPDF() {
     if (al.length) {
       curY -= sa;
       al.forEach((line, j) => {
-        page.drawText(line, { x: cardX + PAD_LEFT, y: curY, font: fontReg, size: sa, color: black });
+        page.drawText(line, { x: cardX + p.left, y: curY, font: fontReg, size: sa, color: black });
         if (j < al.length - 1) curY -= sa * 1.2;
       });
       curY -= 1.5 * MM;
@@ -1238,13 +1253,13 @@ async function buildPDF() {
     // År
     if (created) {
       curY -= sy;
-      page.drawText(created, { x: cardX + PAD_LEFT, y: curY, font: fontReg, size: sy, color: black });
+      page.drawText(created, { x: cardX + p.left, y: curY, font: fontReg, size: sy, color: black });
     }
 
     // Nedre rad: VG-nummer + logotyp
-    const bottomY = cardY + PAD_BOT;
+    const bottomY = cardY + p.bot;
     if (aw.id) {
-      page.drawText(aw.id, { x: cardX + PAD_LEFT, y: bottomY, font: fontReg, size: 7, color: black });
+      page.drawText(aw.id, { x: cardX + p.left, y: bottomY, font: fontReg, size: 7, color: black });
     }
     if (logoImg) {
       const logoH  = 11 * MM;
@@ -1255,7 +1270,7 @@ async function buildPDF() {
       // bottomWhitespace = (135/454) * logoH
       const bottomWS = (135 / dims.height) * logoH;
       page.drawImage(logoImg, {
-        x: cardX + AVERY.cardW - PAD_RIGHT - logoW,
+        x: cardX + AVERY.cardW - p.right - logoW,
         y: bottomY - bottomWS,
         width: logoW, height: logoH,
       });
@@ -1615,11 +1630,28 @@ function bindScalerEvents() {
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
+  loadMargins();
   loadSession();
   loadProjectName();
 
   renderPages();
   await loadLogo();
+
+  // Marginaler
+  const marginInputs = { top: $('margin-top'), right: $('margin-right'), bot: $('margin-bot'), left: $('margin-left') };
+  Object.entries(marginInputs).forEach(([key, inp]) => {
+    inp.value = margins[key];
+    inp.addEventListener('change', () => {
+      const v = parseFloat(inp.value);
+      if (!isNaN(v) && v >= 0) { margins[key] = v; saveMargins(); renderPages(); }
+    });
+  });
+  $('btn-margins-reset').addEventListener('click', () => {
+    margins = { ...DEFAULT_MARGINS };
+    saveMargins();
+    Object.entries(marginInputs).forEach(([key, inp]) => { inp.value = margins[key]; });
+    renderPages();
+  });
 
   // Sidebar buttons
   $('btn-fetch')     .addEventListener('click', fetchAll);

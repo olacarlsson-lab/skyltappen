@@ -87,6 +87,33 @@
 
       <div class="sidebar-divider"></div>
 
+      <div class="sidebar-section">
+        <div class="sidebar-label-row">
+          <span class="sidebar-label">Marginaler (mm)</span>
+          <button id="btn-margins-reset" class="btn-link">Återställ</button>
+        </div>
+        <div class="margins-grid">
+          <div class="margin-field">
+            <label for="margin-top">Överkant</label>
+            <input id="margin-top"   type="number" class="margin-input" min="0" max="20" step="0.5">
+          </div>
+          <div class="margin-field">
+            <label for="margin-right">Högerkant</label>
+            <input id="margin-right" type="number" class="margin-input" min="0" max="20" step="0.5">
+          </div>
+          <div class="margin-field">
+            <label for="margin-bot">Nederkant</label>
+            <input id="margin-bot"   type="number" class="margin-input" min="0" max="20" step="0.5">
+          </div>
+          <div class="margin-field">
+            <label for="margin-left">Vänsterkant</label>
+            <input id="margin-left"  type="number" class="margin-input" min="0" max="20" step="0.5">
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
       <div class="sidebar-section sidebar-info">
         <p class="sidebar-hint">Avery C32010 · 85×54 mm · 2×5 per A4</p>
         <p class="sidebar-hint">Dubbelklicka en skylt för att redigera.</p>

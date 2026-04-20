@@ -163,6 +163,54 @@ body {
   letter-spacing: 0.08em;
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--teal);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.btn-link:hover { color: var(--teal-dark); }
+
+.margins-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.margin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.margin-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.margin-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: rgba(248,250,252,0.6);
+  outline: none;
+  transition: var(--transition);
+}
+.margin-input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-light);
+  background: var(--surface);
+}
+
 .sidebar-label-actions {
   display: flex;
   gap: 6px;
@@ -455,7 +503,7 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 3.5mm 5mm 5mm 7.5mm;
+  /* padding sätts dynamiskt via inline-style från margins-objektet */
   font-family: Helvetica, Arial, sans-serif;
   overflow: hidden;
 }
