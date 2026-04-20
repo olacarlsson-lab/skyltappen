@@ -18,8 +18,9 @@ const AVERY = {
 };
 
 const PAD_LEFT  = 7.5 * MM;
-const PAD_RIGHT = 3.5 * MM;
-const PAD_V     = 3.5 * MM;
+const PAD_RIGHT = 5.0 * MM;
+const PAD_TOP   = 3.5 * MM;
+const PAD_BOT   = 5.0 * MM;
 
 const A4_W = 595.28;
 const A4_H = 841.89;
@@ -1155,7 +1156,7 @@ async function buildPDF() {
   /** Ritar en enskild skylt. cardX/cardY = nedre vänstra hörnet i pt. */
   const drawSign = (page, aw, cardX, cardY) => {
     const maxW = AVERY.cardW - PAD_LEFT - PAD_RIGHT;
-    const maxH = AVERY.cardH - 2 * PAD_V - 8 * MM;
+    const maxH = AVERY.cardH - PAD_TOP - PAD_BOT - 8 * MM;
 
     const creator  = aw.creator || '';
     const title    = aw.title   || '';
@@ -1202,7 +1203,7 @@ async function buildPDF() {
 
     const { cl, tl, al, sc, st, sa, sy } = lay;
 
-    let curY = cardY + AVERY.cardH - PAD_V;
+    let curY = cardY + AVERY.cardH - PAD_TOP;
 
     // Konstnär
     if (cl.length) {
@@ -1241,7 +1242,7 @@ async function buildPDF() {
     }
 
     // Nedre rad: VG-nummer + logotyp
-    const bottomY = cardY + PAD_V;
+    const bottomY = cardY + PAD_BOT;
     if (aw.id) {
       page.drawText(aw.id, { x: cardX + PAD_LEFT, y: bottomY, font: fontReg, size: 7, color: black });
     }
