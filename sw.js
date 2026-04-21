@@ -1,7 +1,7 @@
 'use strict';
 
 // Bumpa versionen vid varje deploy för att tvinga cache-rensning
-const CACHE = 'vgr-konstskylt-20260419';
+const CACHE = 'vgr-konstskylt-20260421';
 
 const PRECACHE = [
   '/',
@@ -35,15 +35,19 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+
   // API-anrop alltid mot nätverket (med cache-fallback om offline)
   if (e.request.url.includes('entryscape.net')) {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
+      fetch(e.request).catch(() =>
+        caches.match(e.request).then(r => r || new Response('', { status: 504, statusText: 'Offline' }))
+      )
     );
     return;
   }
 
-  // Allt annat: cache-first
+  // Allt annat: cache-first, med nätverksfallback och offline-degradering
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
@@ -53,6 +57,12 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return res;
+      }).catch(async () => {
+        if (e.request.mode === 'navigate') {
+          const shell = await caches.match('/index.html');
+          if (shell) return shell;
+        }
+        return new Response('', { status: 504, statusText: 'Offline' });
       });
     })
   );
