@@ -24,10 +24,10 @@ function loadMargins() {
   try {
     const d = localStorage.getItem('vgr_margins');
     if (d) margins = { ...DEFAULT_MARGINS, ...JSON.parse(d) };
-  } catch { }
+  } catch (e) { console.warn('loadMargins:', e); }
 }
 function saveMargins() {
-  try { localStorage.setItem('vgr_margins', JSON.stringify(margins)); } catch { }
+  try { localStorage.setItem('vgr_margins', JSON.stringify(margins)); } catch (e) { handleStorageError(e); }
 }
 const pad = () => ({
   left:  margins.left  * MM,
@@ -62,6 +62,7 @@ let addingNew  = false;       // true när modal öppnades via "Lägg till manue
 
 // WYSIWYG state
 let selectedSlot    = null;  // global slot index of selected label
+let lastAnchorSlot  = null;  // anchor för Shift-klick range-select
 let dragSrc         = null;  // drag source slot index
 let lastDragOverEl  = null;  // element currently showing drag-over highlight
 
@@ -122,20 +123,32 @@ async function loadLogo() {
 }
 
 // ── Session (localStorage) ────────────────────────────────────────────────────
+let storageWarned = false;
+function handleStorageError(e) {
+  const quota = e && (e.name === 'QuotaExceededError' || e.code === 22);
+  if (quota && !storageWarned) {
+    storageWarned = true;
+    if (typeof showToast === 'function') {
+      showToast('Lagringsutrymmet är fullt – ändringar sparas inte. Exportera listan och rensa.', 'error');
+    }
+  } else if (!quota) {
+    console.warn('localStorage-fel:', e);
+  }
+}
 function saveSession() {
-  try { localStorage.setItem('vgr_konstskylt', JSON.stringify(artworks)); } catch { }
+  try { localStorage.setItem('vgr_konstskylt', JSON.stringify(artworks)); } catch (e) { handleStorageError(e); }
 }
 function loadSession() {
   try {
     const d = localStorage.getItem('vgr_konstskylt');
     if (d) artworks = JSON.parse(d);
-  } catch { }
+  } catch (e) { handleStorageError(e); }
 }
 function saveProjectName() {
-  try { localStorage.setItem('vgr_konstskylt_project', projectName); } catch { }
+  try { localStorage.setItem('vgr_konstskylt_project', projectName); } catch (e) { handleStorageError(e); }
 }
 function loadProjectName() {
-  try { projectName = localStorage.getItem('vgr_konstskylt_project') || ''; } catch { }
+  try { projectName = localStorage.getItem('vgr_konstskylt_project') || ''; } catch (e) { handleStorageError(e); }
 }
 
 // ── Inställningar (fasta värden) ──────────────────────────────────────────────
@@ -197,15 +210,19 @@ async function fetchOne(vgId) {
 }
 
 /** Parsar VG-nummer ur fritext.
- *  Accepterar: VG1234, VG-1234, vg1234, 1234 → normaliseras till VG1234 */
+ *  Accepterar: VG1234, VG-1234, vg1234 (var som helst i texten) och
+ *  isolerade 3–6-siffriga tal som står ensamma på en rad eller mellan
+ *  avgränsare (,; tab), så att löpande text inte ger falska träffar. */
 function parseVgNumbers(raw) {
-  const tokens = [...raw.matchAll(/\bVG[-]?(\d+)\b|\b(\d{3,6})\b/gi)];
   const seen = new Set();
   const result = [];
-  for (const m of tokens) {
-    const digits = (m[1] || m[2]).replace(/^0+/, '') || '0';
-    const norm = 'VG' + digits;
+  const push = digits => {
+    const norm = 'VG' + (digits.replace(/^0+/, '') || '0');
     if (!seen.has(norm)) { seen.add(norm); result.push(norm); }
+  };
+  for (const m of raw.matchAll(/\bVG[-]?(\d+)\b/gi)) push(m[1]);
+  for (const token of raw.split(/[\s,;]+/)) {
+    if (/^\d{3,6}$/.test(token)) push(token);
   }
   return result;
 }
@@ -228,7 +245,7 @@ async function fetchAll() {
   pf.style.width = '0%';
 
   const toFetch = ids.filter(id => !artworks.some(a => a.id.toUpperCase() === id.toUpperCase()));
-  const notFound = [], errors = [];
+  const notFound = [], errors = [], timeouts = [];
   let done = 0;
 
   const CONCURRENCY = 5;
@@ -252,8 +269,9 @@ async function fetchAll() {
     if (result && typeof result === 'object') {
       artworks.push(result);
     } else {
-      if (result === null) notFound.push(vgId);
-      else                 errors.push(vgId);
+      if (result === null)            notFound.push(vgId);
+      else if (result === 'timeout')  timeouts.push(vgId);
+      else                            errors.push(vgId);
       artworks.push({ id: vgId, creator: '', title: '', artform: '', created: '' });
     }
   }
@@ -267,11 +285,12 @@ async function fetchAll() {
   btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg> Hämta data`;
   saveSession();
 
-  const added = toFetch.length - notFound.length - errors.length;
+  const added = toFetch.length - notFound.length - errors.length - timeouts.length;
   let type = 'success';
   let msg = `${ids.length} ID:n behandlade`;
   if (added > 0) msg += `, ${added} tillagda`;
   if (notFound.length) { msg += `. Ej funna: ${notFound.join(', ')}`; type = 'info'; }
+  if (timeouts.length) { msg += `. Tidsgräns: ${timeouts.join(', ')}`; type = 'error'; }
   if (errors.length)   { msg += `. Fel: ${errors.join(', ')}`; type = 'error'; }
   msg += '.';
   showToast(msg, type);
@@ -465,8 +484,21 @@ function createLabelEl(slot, aw) {
 
 function selectSlot(slot, el, event = null) {
   const multi = event?.ctrlKey || event?.metaKey;
+  const range = event?.shiftKey;
 
-  if (multi) {
+  if (range && lastAnchorSlot !== null) {
+    // Shift+klick — välj intervall från ankaret till slot
+    document.querySelectorAll('.label-slot.selected').forEach(e => e.classList.remove('selected'));
+    selected.clear();
+    const [a, b] = [lastAnchorSlot, slot].sort((x, y) => x - y);
+    for (let i = a; i <= b; i++) {
+      if (!artworks[i]) continue;
+      selected.add(i);
+      document.querySelector(`.label-slot[data-slot="${i}"]`)?.classList.add('selected');
+    }
+    selectedSlot = slot;
+    closePopover(/*keepSelection*/ true);
+  } else if (multi) {
     // Ctrl/Cmd+klick — lägg till eller ta bort ur urvalet
     if (selected.has(slot)) {
       selected.delete(slot);
@@ -475,7 +507,7 @@ function selectSlot(slot, el, event = null) {
       selected.add(slot);
       el.classList.add('selected');
     }
-    // Stäng popover vid multi-val
+    lastAnchorSlot = slot;
     closePopover(/*keepSelection*/ true);
     selectedSlot = null;
   } else {
@@ -486,6 +518,7 @@ function selectSlot(slot, el, event = null) {
     selected.clear();
     selected.add(slot);
     selectedSlot = slot;
+    lastAnchorSlot = slot;
     el.classList.add('selected');
     closePopover(/*keepSelection*/ true);
   }
@@ -521,7 +554,10 @@ function updateLabelEl(slot) {
   }
   if (id) id.textContent = aw.id;
   el.dataset.step = aw.sizeStep || 0;
-  $('pop-vg-id').textContent = aw.id;
+  const pop = $('edit-popover');
+  if (pop && pop.style.display !== 'none') {
+    $('pop-vg-id').textContent = aw.id;
+  }
 }
 
 // ── Popover ───────────────────────────────────────────────────────────────────
@@ -883,14 +919,16 @@ function importList(e) {
         if (inp) inp.value = projectName;
         saveProjectName();
       }
-      artworks = parsed.map(a => ({
-        id:       String(a.id      || ''),
-        creator:  String(a.creator || ''),
-        title:    String(a.title   || ''),
-        artform:  String(a.artform || ''),
-        created:  String(a.created || ''),
-        sizeStep: Number.isInteger(a.sizeStep) ? a.sizeStep : 0,
-      }));
+      artworks = parsed
+        .filter(a => a && typeof a === 'object')
+        .map(a => ({
+          id:       String(a.id      || ''),
+          creator:  String(a.creator || ''),
+          title:    String(a.title   || ''),
+          artform:  String(a.artform || ''),
+          created:  String(a.created || ''),
+          sizeStep: Number.isInteger(a.sizeStep) ? a.sizeStep : 0,
+        }));
       selected.clear();
       selectedSlot = null;
       closePopover();
@@ -912,8 +950,11 @@ function sortArtworks(key, dir) {
   artworks.sort((a, b) => {
     const av = (a[key] || '').toLowerCase();
     const bv = (b[key] || '').toLowerCase();
+    if (!av && bv) return 1;
+    if (av && !bv) return -1;
     return dir * av.localeCompare(bv, 'sv');
   });
+  selected.clear();
   selectedSlot = null;
   closePopover();
   renderPages();
@@ -988,15 +1029,15 @@ function loadFile(e) {
         // Plocka ut alla celler som matchar VG-nummermönstret
         const vgNums = [];
         const seen   = new Set();
+        const push = digits => {
+          const norm = 'VG' + (digits.replace(/^0+/, '') || '0');
+          if (!seen.has(norm)) { seen.add(norm); vgNums.push(norm); }
+        };
         for (const row of rows) {
           for (const cell of row) {
             const str = String(cell).trim();
-            const matches = [...str.matchAll(/\bVG[-]?(\d+)\b|\b(\d{3,6})\b/gi)];
-            for (const m of matches) {
-              const digits = (m[1] || m[2]).replace(/^0+/, '') || '0';
-              const norm   = 'VG' + digits;
-              if (!seen.has(norm)) { seen.add(norm); vgNums.push(norm); }
-            }
+            if (/^\d{3,6}$/.test(str)) { push(str); continue; }
+            for (const m of str.matchAll(/\bVG[-]?(\d+)\b/gi)) push(m[1]);
           }
         }
 
@@ -1032,7 +1073,7 @@ function loadFile(e) {
 
 function handleKeydown(e) {
   const active  = document.activeElement;
-  const inField = active.tagName === 'INPUT' || active.tagName === 'TEXTAREA';
+  const inField = !!active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
 
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault();
@@ -1095,12 +1136,12 @@ function handleKeydown(e) {
     }
   }
 
-  if (e.key === 'Enter' && active.closest('#modal-overlay') && active.tagName !== 'TEXTAREA') {
+  if (e.key === 'Enter' && active?.closest('#modal-overlay') && active.tagName !== 'TEXTAREA') {
     saveModal();
   }
   if (e.key === 'Escape') {
     closeModal();
-    closeSettings();
+    closeArtworkSearch();
     hideCtxMenu();
     closePopover();
     // Rensa sökfältet om det har innehåll
@@ -1383,8 +1424,13 @@ async function loadArtworkIndex() {
 
   setSearchLoadState('Laddar konstverk…', 0);
 
+  const fetchJson = url => fetch(url, { signal: AbortSignal.timeout(15000) }).then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+
   try {
-    const first = await fetch(`${API_URL}?_limit=${LIMIT}&_offset=0`).then(r => r.json());
+    const first = await fetchJson(`${API_URL}?_limit=${LIMIT}&_offset=0`);
     let all     = first.results || [];
     const total = first.resultCount || all.length;
 
@@ -1399,7 +1445,7 @@ async function loadArtworkIndex() {
     async function worker() {
       while (queue.length) {
         const url  = queue.shift();
-        const data = await fetch(url).then(r => r.json());
+        const data = await fetchJson(url);
         if (data.results) all.push(...data.results);
         done++;
         setSearchLoadState(`Laddar… ${Math.round(done / totalBatches * 100)} %`, done / totalBatches);
@@ -1414,7 +1460,7 @@ async function loadArtworkIndex() {
     refreshSearchResults();
 
     const ts = Date.now();
-    try { localStorage.setItem('vgr_search_index', JSON.stringify({ ts, data: all })); } catch { }
+    try { localStorage.setItem('vgr_search_index', JSON.stringify({ ts, data: all })); } catch (e) { handleStorageError(e); }
     showCacheAge(ts);
   } catch (e) {
     setSearchLoadState('Kunde inte ladda register: ' + e.message);

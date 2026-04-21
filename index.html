@@ -154,7 +154,7 @@
   </div>
 
   <!-- ── Floating edit popover ── -->
-  <div id="edit-popover" class="edit-popover" style="display:none">
+  <div id="edit-popover" class="edit-popover" role="dialog" aria-label="Redigera skylt" style="display:none">
     <div class="popover-header">
       <span id="pop-vg-id" class="pop-vg-badge"></span>
       <button id="pop-close" class="pop-close">×</button>
@@ -177,40 +177,40 @@
   </div>
 
   <!-- ── Context menu ── -->
-  <ul id="ctx-menu" class="ctx-menu" style="display:none">
-    <li class="ctx-item" data-action="undo">
+  <ul id="ctx-menu" class="ctx-menu" role="menu" aria-label="Skyltmeny" style="display:none">
+    <li class="ctx-item" role="menuitem" data-action="undo">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
       Ångra
     </li>
-    <li class="ctx-item" data-action="edit">
+    <li class="ctx-item" role="menuitem" data-action="edit">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Redigera
     </li>
-    <li class="ctx-item" data-action="duplicate">
+    <li class="ctx-item" role="menuitem" data-action="duplicate">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       Duplicera
     </li>
     <li class="ctx-divider"></li>
-    <li id="ctx-merge" class="ctx-item" data-action="merge">
+    <li id="ctx-merge" class="ctx-item" role="menuitem" data-action="merge">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
       Slå ihop valda
     </li>
-    <li id="ctx-split" class="ctx-item" data-action="split">
+    <li id="ctx-split" class="ctx-item" role="menuitem" data-action="split">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="12" x2="3" y2="12"/><polyline points="9 18 3 12 9 6"/><polyline points="15 6 21 12 15 18"/></svg>
       Dela upp
     </li>
     <li class="ctx-divider"></li>
-    <li class="ctx-item ctx-item--danger" data-action="delete">
+    <li class="ctx-item ctx-item--danger" role="menuitem" data-action="delete">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
       Ta bort
     </li>
   </ul>
 
   <!-- ── Edit Modal (for manual add) ── -->
-  <div id="modal-overlay" class="modal-overlay">
+  <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">Redigera konstverk</h3>
+        <h3 id="modal-title" class="modal-title">Redigera konstverk</h3>
         <button id="modal-close" class="modal-close-btn" aria-label="Stäng">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -224,7 +224,7 @@
   </div>
 
   <!-- ── Merge bar (visas när 2+ konstverk är valda) ── -->
-  <div id="merge-bar" class="merge-bar">
+  <div id="merge-bar" class="merge-bar" role="toolbar" aria-label="Åtgärder för valda skyltar">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
     <span id="merge-bar-count">2 konstverk valda</span>
     <div class="merge-bar-divider"></div>
@@ -239,10 +239,10 @@
   </div>
 
   <!-- ── Artwork search modal ── -->
-  <div id="artwork-search-overlay" class="modal-overlay">
+  <div id="artwork-search-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="artwork-search-title">
     <div class="modal-card search-modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">Sök konstverk</h3>
+        <h3 id="artwork-search-title" class="modal-title">Sök konstverk</h3>
         <button id="artwork-search-close" class="modal-close-btn" aria-label="Stäng">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -276,7 +276,9 @@
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.warn('Service worker-registrering misslyckades:', err);
+      });
     }
   </script>
 </body>
