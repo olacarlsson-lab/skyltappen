@@ -454,6 +454,7 @@ function createLabelEl(slot, aw) {
   el.className = `label-slot ${aw ? 'filled' : 'empty'}`;
   el.dataset.slot = slot;
   if (aw) el.dataset.step = aw.sizeStep || 0;
+  if (aw) el.style.setProperty('--ks', (aw.kerning || 0) / 100);
 
   if (aw) {
     if (slot === selectedSlot) el.classList.add('selected');
@@ -554,6 +555,7 @@ function updateLabelEl(slot) {
   }
   if (id) id.textContent = aw.id;
   el.dataset.step = aw.sizeStep || 0;
+  el.style.setProperty('--ks', (aw.kerning || 0) / 100);
   const pop = $('edit-popover');
   if (pop && pop.style.display !== 'none') {
     $('pop-vg-id').textContent = aw.id;
@@ -578,6 +580,10 @@ function openPopover(slot, labelEl) {
   pop.querySelectorAll('.pop-step-btn').forEach(btn =>
     btn.classList.toggle('active', parseInt(btn.dataset.step) === step)
   );
+
+  const kerning = aw.kerning || 0;
+  $('pop-kerning').value = kerning;
+  $('pop-kerning-val').textContent = formatKerning(kerning);
 
   pop.style.display = 'block';
   positionPopover(labelEl);
@@ -611,6 +617,12 @@ function closePopover(keepSelection = false) {
   }
 }
 
+function formatKerning(v) {
+  if (v === 0) return '0';
+  const em = v / 100;
+  return (em > 0 ? '+' : '') + em.toFixed(2);
+}
+
 function bindPopoverInputs() {
   const fields = [
     ['pop-creator', 'creator'],
@@ -639,6 +651,26 @@ function bindPopoverInputs() {
       if (el) el.dataset.step = step;
       saveSession();
     });
+  });
+
+  $('pop-kerning').addEventListener('input', e => {
+    if (selectedSlot === null) return;
+    const k = parseInt(e.target.value, 10);
+    artworks[selectedSlot].kerning = k;
+    $('pop-kerning-val').textContent = formatKerning(k);
+    const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
+    if (el) el.style.setProperty('--ks', k / 100);
+    saveSession();
+  });
+
+  $('pop-kerning-reset').addEventListener('click', () => {
+    if (selectedSlot === null) return;
+    artworks[selectedSlot].kerning = 0;
+    $('pop-kerning').value = 0;
+    $('pop-kerning-val').textContent = formatKerning(0);
+    const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
+    if (el) el.style.setProperty('--ks', 0);
+    saveSession();
   });
 
   $('pop-close').addEventListener('click', closePopover);
@@ -928,6 +960,7 @@ function importList(e) {
           artform:  String(a.artform || ''),
           created:  String(a.created || ''),
           sizeStep: Number.isInteger(a.sizeStep) ? a.sizeStep : 0,
+          kerning:  Number.isInteger(a.kerning)  ? a.kerning  : 0,
         }));
       selected.clear();
       selectedSlot = null;
@@ -1258,12 +1291,14 @@ async function buildPDF() {
     }
 
     const { cl, tl, al, sc, st, sa, sy } = lay;
+    const ks = (aw.kerning || 0) / 100;
 
     let curY = cardY + AVERY.cardH - p.top;
 
     // Konstnär
     if (cl.length) {
       curY -= sc;
+      page.setCharacterSpacing(ks * sc);
       cl.forEach((line, j) => {
         page.drawText(line, { x: cardX + p.left, y: curY, font: fontReg, size: sc, color: black });
         if (j < cl.length - 1) curY -= sc * 1.2;
@@ -1274,6 +1309,7 @@ async function buildPDF() {
     // Titel
     if (tl.length) {
       curY -= st * 1.05;
+      page.setCharacterSpacing(ks * st);
       tl.forEach((line, j) => {
         page.drawText(line, { x: cardX + p.left, y: curY, font: fontBold, size: st, color: black });
         if (j < tl.length - 1) curY -= st * 1.3;
@@ -1284,6 +1320,7 @@ async function buildPDF() {
     // Konsttyp
     if (al.length) {
       curY -= sa;
+      page.setCharacterSpacing(ks * sa);
       al.forEach((line, j) => {
         page.drawText(line, { x: cardX + p.left, y: curY, font: fontReg, size: sa, color: black });
         if (j < al.length - 1) curY -= sa * 1.2;
@@ -1294,8 +1331,12 @@ async function buildPDF() {
     // År
     if (created) {
       curY -= sy;
+      page.setCharacterSpacing(ks * sy);
       page.drawText(created, { x: cardX + p.left, y: curY, font: fontReg, size: sy, color: black });
     }
+
+    // Återställ teckensärning inför nedre rad
+    page.setCharacterSpacing(0);
 
     // Nedre rad: VG-nummer + logotyp
     const bottomY = cardY + p.bot;
@@ -1565,6 +1606,7 @@ function addFromSearch(rawId) {
     artform:  String(item.artform || '').trim(),
     created:  String(item.created || '').trim(),
     sizeStep: 0,
+    kerning:  0,
   });
   renderPages();
   saveSession();

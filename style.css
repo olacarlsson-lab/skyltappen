@@ -447,6 +447,7 @@ body {
   box-sizing: border-box;
   cursor: pointer;
   --ss: 1;
+  --ks: 0;
   /* left/top set per slot */
 }
 .label-slot[data-step="1"] { --ss: 0.85; }
@@ -522,6 +523,7 @@ body {
   font-weight: 400;
   color: #000;
   line-height: 1.2;
+  letter-spacing: calc(var(--ks) * 1em);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -531,6 +533,7 @@ body {
   font-weight: 700;
   color: #000;
   line-height: 1.2;
+  letter-spacing: calc(var(--ks) * 1em);
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -546,6 +549,7 @@ body {
   font-weight: 400;
   color: #000;
   line-height: 1.2;
+  letter-spacing: calc(var(--ks) * 1em);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -555,6 +559,7 @@ body {
   font-size: calc(3.53mm * var(--ss));
   font-weight: 400;
   color: #000;
+  letter-spacing: calc(var(--ks) * 1em);
   margin-top: 0.4mm;
 }
 
@@ -765,6 +770,48 @@ body {
 .pop-step-btn[data-step="0"] { font-size: 15px; }
 .pop-step-btn:hover { background: var(--teal-light); border-color: var(--border-focus); color: var(--teal); transform: translateY(-1px); }
 .pop-step-btn.active { background: var(--teal); border-color: var(--teal); color: white; box-shadow: 0 4px 8px var(--teal-glow); }
+
+.pop-kerning-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 1px solid rgba(15,23,42,0.06);
+  gap: 8px;
+}
+.pop-kerning-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.pop-kerning-slider {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--teal);
+  cursor: pointer;
+}
+.pop-kerning-val {
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Inter', monospace;
+}
+.pop-kerning-reset {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-faint);
+  padding: 2px 5px;
+  font-size: 13px;
+  line-height: 1;
+  transition: var(--transition);
+}
+.pop-kerning-reset:hover { color: var(--teal); background: var(--teal-light); border-color: var(--border-focus); }
 
 /* ── Merge bar ───────────────────────────────────────────────────────────────── */
 .merge-bar {
