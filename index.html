@@ -181,6 +181,22 @@
           <button id="pop-kerning-reset" class="pop-kerning-reset" title="Återställ spärr" aria-label="Återställ spärr">↺</button>
         </div>
       </div>
+      <div class="pop-adv-section">
+        <button id="pop-adv-toggle" class="pop-adv-toggle" aria-expanded="false" type="button">
+          Avancerat
+          <svg class="pop-adv-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="pop-adv-panel" class="pop-adv-panel" hidden>
+          <p class="pop-adv-hint">Klicka mellan två bokstäver för att justera mellanrummet.</p>
+          <div id="pop-pk-fields" class="pop-pk-fields"></div>
+          <div id="pop-pk-ctrl" class="pop-pk-ctrl" hidden>
+            <span id="pop-pk-label" class="pop-pk-label"></span>
+            <input type="range" id="pop-pk-slider" class="pop-kerning-slider" min="-10" max="10" step="1" value="0">
+            <output id="pop-pk-val" class="pop-kerning-val" for="pop-pk-slider">0</output>
+            <button id="pop-pk-reset" class="pop-kerning-reset" title="Återställ gap" type="button">↺</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
