@@ -1,7 +1,7 @@
 'use strict';
 
 // Bumpa versionen vid varje deploy för att tvinga cache-rensning
-const CACHE = 'vgr-konstskylt-20260421';
+const CACHE = 'vgr-konstskylt-20260430';
 
 const PRECACHE = [
   '/',
