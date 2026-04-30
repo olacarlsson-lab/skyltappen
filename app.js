@@ -1299,21 +1299,29 @@ async function buildPDF() {
 
     // Nedre rad: VG-nummer + logotyp
     const bottomY = cardY + p.bot;
-    if (aw.id) {
-      page.drawText(aw.id, { x: cardX + p.left, y: bottomY, font: fontReg, size: 7, color: black });
-    }
+
+    // Beräkna logobredd först så att VG-numret vet hur mycket bredd det har.
+    let logoDrawW = 0;
     if (logoImg) {
-      const logoH  = 11 * MM;
-      const dims   = logoImg.scale(1);
-      const logoW  = logoH * (dims.width / dims.height);
-      // Bilden har ~30% tomt utrymme under textens baslinje (135/454 px).
-      // Vi placerar bilden så att texten linjerar med bottomY.
-      // bottomWhitespace = (135/454) * logoH
+      const logoH   = 11 * MM;
+      const dims    = logoImg.scale(1);
+      logoDrawW     = logoH * (dims.width / dims.height);
       const bottomWS = (135 / dims.height) * logoH;
       page.drawImage(logoImg, {
-        x: cardX + AVERY.cardW - p.right - logoW,
+        x: cardX + AVERY.cardW - p.right - logoDrawW,
         y: bottomY - bottomWS,
-        width: logoW, height: logoH,
+        width: logoDrawW, height: logoH,
+      });
+    }
+
+    if (aw.id) {
+      const idGap  = logoDrawW > 0 ? 3 * MM : 0;
+      const idMaxW = AVERY.cardW - p.left - p.right - logoDrawW - idGap;
+      const idLines = wrapText(aw.id, fontReg, 7, idMaxW, 4);
+      idLines.forEach((line, j) => {
+        // Sista raden ligger vid bottomY, övriga staplas uppåt.
+        const lineY = bottomY + (idLines.length - 1 - j) * 8;
+        page.drawText(line, { x: cardX + p.left, y: lineY, font: fontReg, size: 7, color: black });
       });
     }
 
