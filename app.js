@@ -87,31 +87,6 @@ function renderMultiline(text, cls) {
     .join('');
 }
 
-// Renderar ett textfält tecken-för-tecken med parvisa kerning-justeringar.
-// pk = { charIndex: centiem } – t.ex. { 2: -3 } → −0.03 em efter index 2.
-function renderKernedField(text, cls, pk) {
-  if (!text) return '';
-  if (!pk || !Object.keys(pk).length) return renderMultiline(text, cls);
-  const chars = [...text];
-  const divs = [];
-  let lineSpans = [];
-  chars.forEach((ch, i) => {
-    if (ch === '\n') {
-      divs.push(`<div class="${cls}">${lineSpans.join('') || '&nbsp;'}</div>`);
-      lineSpans = [];
-      return;
-    }
-    const adj = pk[i];
-    const style = adj ? ` style="margin-right:${adj / 100}em"` : '';
-    lineSpans.push(`<span${style}>${esc(ch)}</span>`);
-  });
-  divs.push(`<div class="${cls}">${lineSpans.join('') || '&nbsp;'}</div>`);
-  return divs.join('');
-}
-
-// UI-state för vilken gap i advanced-panelen som är markerad.
-let pairKernSel = { field: null, index: null };
-
 // ── Toast notifications ───────────────────────────────────────────────────────
 function showToast(msg, type = 'info') {
   const container = $('toast-container');
@@ -479,7 +454,6 @@ function createLabelEl(slot, aw) {
   el.className = `label-slot ${aw ? 'filled' : 'empty'}`;
   el.dataset.slot = slot;
   if (aw) el.dataset.step = aw.sizeStep || 0;
-  if (aw) el.style.setProperty('--ks', (aw.kerning || 0) / 100);
 
   if (aw) {
     if (slot === selectedSlot) el.classList.add('selected');
@@ -488,10 +462,10 @@ function createLabelEl(slot, aw) {
       <div class="slot-badge">${slot + 1}</div>
       <div class="label-content" style="padding:${margins.top}mm ${margins.right}mm ${margins.bot}mm ${margins.left}mm">
         <div class="label-text-area">
-          ${renderKernedField(aw.creator, 'sign-creator', aw.pairKerning?.creator)}
-          ${renderKernedField(aw.title,   'sign-title',   aw.pairKerning?.title)}
-          ${renderKernedField(aw.artform, 'sign-artform', aw.pairKerning?.artform)}
-          ${aw.created ? renderKernedField(aw.created, 'sign-year', aw.pairKerning?.year) : ''}
+          ${renderMultiline(aw.creator, 'sign-creator')}
+          ${renderMultiline(aw.title,   'sign-title')}
+          ${renderMultiline(aw.artform, 'sign-artform')}
+          ${aw.created ? renderMultiline(aw.created, 'sign-year') : ''}
         </div>
         <div class="sign-bottom">
           <span class="sign-id">${esc(aw.id)}</span>
@@ -573,14 +547,13 @@ function updateLabelEl(slot) {
   const id = el.querySelector('.sign-id');
   if (ta) {
     ta.innerHTML = `
-      ${renderKernedField(aw.creator, 'sign-creator', aw.pairKerning?.creator)}
-      ${renderKernedField(aw.title,   'sign-title',   aw.pairKerning?.title)}
-      ${renderKernedField(aw.artform, 'sign-artform', aw.pairKerning?.artform)}
-      ${aw.created ? renderKernedField(aw.created, 'sign-year', aw.pairKerning?.year) : ''}`;
+      ${renderMultiline(aw.creator, 'sign-creator')}
+      ${renderMultiline(aw.title,   'sign-title')}
+      ${renderMultiline(aw.artform, 'sign-artform')}
+      ${aw.created ? renderMultiline(aw.created, 'sign-year') : ''}`;
   }
   if (id) id.textContent = aw.id;
   el.dataset.step = aw.sizeStep || 0;
-  el.style.setProperty('--ks', (aw.kerning || 0) / 100);
   const pop = $('edit-popover');
   if (pop && pop.style.display !== 'none') {
     $('pop-vg-id').textContent = aw.id;
@@ -605,21 +578,6 @@ function openPopover(slot, labelEl) {
   pop.querySelectorAll('.pop-step-btn').forEach(btn =>
     btn.classList.toggle('active', parseInt(btn.dataset.step) === step)
   );
-
-  const kerning = aw.kerning || 0;
-  $('pop-kerning').value = kerning;
-  $('pop-kerning-val').textContent = formatKerning(kerning);
-
-  // Återställ advanced-panelen (stäng och rensa gap-markering)
-  pairKernSel = { field: null, index: null };
-  const advPanel = $('pop-adv-panel');
-  const advToggle = $('pop-adv-toggle');
-  if (advPanel && !advPanel.hidden) {
-    advPanel.hidden = true;
-    advToggle.setAttribute('aria-expanded', 'false');
-  }
-  const pkCtrl = $('pop-pk-ctrl');
-  if (pkCtrl) pkCtrl.hidden = true;
 
   pop.style.display = 'block';
   positionPopover(labelEl);
@@ -653,52 +611,6 @@ function closePopover(keepSelection = false) {
   }
 }
 
-function formatKerning(v) {
-  if (v === 0) return '0';
-  const em = v / 100;
-  return (em > 0 ? '+' : '') + em.toFixed(2);
-}
-
-function buildAdvancedPanel(aw) {
-  const fieldDefs = [
-    { key: 'creator', label: 'Konstnär', text: aw.creator  },
-    { key: 'title',   label: 'Titel',    text: aw.title    },
-    { key: 'artform', label: 'Konsttyp', text: aw.artform  },
-    { key: 'year',    label: 'År',       text: aw.created  },
-  ];
-  const pk = aw.pairKerning || {};
-
-  const rows = fieldDefs
-    .filter(f => f.text)
-    .map(({ key, label, text }) => {
-      const fpk  = pk[key] || {};
-      const chars = [...String(text)];
-      const items = [];
-
-      chars.forEach((ch, i) => {
-        if (ch === '\n') {
-          items.push(`<span class="pop-pk-nl">↵</span>`);
-          return;
-        }
-        items.push(`<span class="pop-pk-char">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`);
-        if (i < chars.length - 1 && chars[i + 1] !== '\n') {
-          const isSel  = pairKernSel.field === key && pairKernSel.index === i;
-          const hasAdj = (fpk[i] ?? 0) !== 0;
-          const cls = ['pop-pk-gap', hasAdj ? 'has-kerning' : '', isSel ? 'selected' : '']
-            .filter(Boolean).join(' ');
-          items.push(`<button class="${cls}" data-field="${key}" data-idx="${i}" type="button" title="Gap ${i}↔${i+1}"></button>`);
-        }
-      });
-
-      return `<div class="pop-pk-field">
-        <div class="pop-pk-field-label">${label}</div>
-        <div class="pop-pk-chars">${items.join('')}</div>
-      </div>`;
-    });
-
-  return rows.join('');
-}
-
 function bindPopoverInputs() {
   const fields = [
     ['pop-creator', 'creator'],
@@ -729,104 +641,7 @@ function bindPopoverInputs() {
     });
   });
 
-  $('pop-kerning').addEventListener('input', e => {
-    if (selectedSlot === null) return;
-    const k = parseInt(e.target.value, 10);
-    artworks[selectedSlot].kerning = k;
-    $('pop-kerning-val').textContent = formatKerning(k);
-    const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
-    if (el) el.style.setProperty('--ks', k / 100);
-    saveSession();
-  });
-
-  $('pop-kerning-reset').addEventListener('click', () => {
-    if (selectedSlot === null) return;
-    artworks[selectedSlot].kerning = 0;
-    $('pop-kerning').value = 0;
-    $('pop-kerning-val').textContent = formatKerning(0);
-    const el = document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`);
-    if (el) el.style.setProperty('--ks', 0);
-    saveSession();
-  });
-
   $('pop-close').addEventListener('click', closePopover);
-
-  // ── Advanced / par-kerning ────────────────────────────────────────────────
-  $('pop-adv-toggle').addEventListener('click', () => {
-    if (selectedSlot === null) return;
-    const panel  = $('pop-adv-panel');
-    const toggle = $('pop-adv-toggle');
-    const open   = panel.hidden;
-    panel.hidden = !open;
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) {
-      $('pop-pk-fields').innerHTML = buildAdvancedPanel(artworks[selectedSlot]);
-      $('pop-pk-ctrl').hidden = true;
-    }
-    positionPopover(document.querySelector(`.label-slot[data-slot="${selectedSlot}"]`));
-  });
-
-  // Gap-klick via delegering på pop-pk-fields
-  $('pop-pk-fields').addEventListener('click', e => {
-    const btn = e.target.closest('.pop-pk-gap');
-    if (!btn || selectedSlot === null) return;
-    const field = btn.dataset.field;
-    const index = parseInt(btn.dataset.idx, 10);
-    pairKernSel = { field, index };
-
-    // Markera valt gap
-    $('pop-pk-fields').querySelectorAll('.pop-pk-gap').forEach(g =>
-      g.classList.toggle('selected', g === btn)
-    );
-
-    // Hämta befintligt värde
-    const aw = artworks[selectedSlot];
-    if (!aw.pairKerning)           aw.pairKerning = {};
-    if (!aw.pairKerning[field])    aw.pairKerning[field] = {};
-    const val = aw.pairKerning[field][index] ?? 0;
-
-    $('pop-pk-label').textContent = `${index + 1}→${index + 2}`;
-    $('pop-pk-slider').value = val;
-    $('pop-pk-val').textContent = formatKerning(val);
-    $('pop-pk-ctrl').hidden = false;
-  });
-
-  $('pop-pk-slider').addEventListener('input', e => {
-    if (selectedSlot === null || pairKernSel.field === null) return;
-    const val   = parseInt(e.target.value, 10);
-    const { field, index } = pairKernSel;
-    const aw = artworks[selectedSlot];
-    if (!aw.pairKerning)        aw.pairKerning = {};
-    if (!aw.pairKerning[field]) aw.pairKerning[field] = {};
-
-    if (val === 0) {
-      delete aw.pairKerning[field][index];
-    } else {
-      aw.pairKerning[field][index] = val;
-    }
-
-    $('pop-pk-val').textContent = formatKerning(val);
-
-    // Uppdatera gap-knappens utseende
-    const btn = $('pop-pk-fields').querySelector(`[data-field="${field}"][data-idx="${index}"]`);
-    if (btn) btn.classList.toggle('has-kerning', val !== 0);
-
-    updateLabelEl(selectedSlot);
-    saveSession();
-  });
-
-  $('pop-pk-reset').addEventListener('click', () => {
-    if (selectedSlot === null || pairKernSel.field === null) return;
-    const { field, index } = pairKernSel;
-    const aw = artworks[selectedSlot];
-    if (aw.pairKerning?.[field]) delete aw.pairKerning[field][index];
-    $('pop-pk-slider').value = 0;
-    $('pop-pk-val').textContent = formatKerning(0);
-    const btn = $('pop-pk-fields').querySelector(`[data-field="${field}"][data-idx="${index}"]`);
-    if (btn) btn.classList.remove('has-kerning');
-    updateLabelEl(selectedSlot);
-    saveSession();
-  });
 
   // Close popover when clicking on the A4 page background (not on a label)
   $('page-scaler')?.addEventListener('click', e => {
@@ -1113,8 +928,6 @@ function importList(e) {
           artform:  String(a.artform || ''),
           created:  String(a.created || ''),
           sizeStep:    Number.isInteger(a.sizeStep) ? a.sizeStep : 0,
-          kerning:     Number.isInteger(a.kerning)  ? a.kerning  : 0,
-          pairKerning: (a.pairKerning && typeof a.pairKerning === 'object') ? a.pairKerning : {},
         }));
       selected.clear();
       selectedSlot = null;
@@ -1445,81 +1258,45 @@ async function buildPDF() {
     }
 
     const { cl, tl, al, sc, st, sa, sy } = lay;
-    const ks  = (aw.kerning || 0) / 100;
-    const pk  = aw.pairKerning || {};
-    const X   = cardX + p.left;
-
-    // Ritar en textrad tecken-för-tecken med parvisa kerning-justeringar.
-    // globalIdx = startposition i originalsträngen för denna rad.
-    const drawChars = (line, font, size, x, y, fpk, globalIdx) => {
-      let cx = x;
-      const chars = [...line];
-      chars.forEach((ch, i) => {
-        page.drawText(ch, { x: cx, y, font, size, color: black });
-        cx += font.widthOfTextAtSize(ch, size) + ((fpk[globalIdx + i] ?? 0) / 100 + ks) * size;
-      });
-    };
-
-    // Ritar ett fält: om parvisa justeringar finns → tecken-för-tecken,
-    // annars → setCharacterSpacing + drawText per rad.
-    const drawField = (rawText, wrappedLines, font, size, lineH, fpk) => {
-      const hasPK = fpk && Object.keys(fpk).length > 0;
-      if (hasPK) {
-        page.setCharacterSpacing(0);
-        const rawLines = String(rawText).split('\n').slice(0, 3);
-        let gi = 0;
-        rawLines.forEach((line, j) => {
-          drawChars(line, font, size, X, curY, fpk, gi);
-          gi += line.length + 1;
-          if (j < rawLines.length - 1) curY -= lineH;
-        });
-      } else {
-        page.setCharacterSpacing(ks * size);
-        wrappedLines.forEach((line, j) => {
-          page.drawText(line, { x: X, y: curY, font, size, color: black });
-          if (j < wrappedLines.length - 1) curY -= lineH;
-        });
-      }
-    };
+    const X = cardX + p.left;
 
     let curY = cardY + AVERY.cardH - p.top;
 
     // Konstnär
     if (cl.length) {
       curY -= sc;
-      drawField(creator, cl, fontReg,  sc, sc * 1.2, pk.creator);
+      cl.forEach((line, j) => {
+        page.drawText(line, { x: X, y: curY, font: fontReg, size: sc, color: black });
+        if (j < cl.length - 1) curY -= sc * 1.2;
+      });
       curY -= 1.5 * MM;
     }
 
     // Titel
     if (tl.length) {
       curY -= st * 1.05;
-      drawField(title, tl, fontBold, st, st * 1.3, pk.title);
+      tl.forEach((line, j) => {
+        page.drawText(line, { x: X, y: curY, font: fontBold, size: st, color: black });
+        if (j < tl.length - 1) curY -= st * 1.3;
+      });
       curY -= 2.0 * MM;
     }
 
     // Konsttyp
     if (al.length) {
       curY -= sa;
-      drawField(artform, al, fontReg,  sa, sa * 1.2, pk.artform);
+      al.forEach((line, j) => {
+        page.drawText(line, { x: X, y: curY, font: fontReg, size: sa, color: black });
+        if (j < al.length - 1) curY -= sa * 1.2;
+      });
       curY -= 1.5 * MM;
     }
 
     // År
     if (created) {
       curY -= sy;
-      const yearPK = pk.year;
-      if (yearPK && Object.keys(yearPK).length) {
-        page.setCharacterSpacing(0);
-        drawChars(created, fontReg, sy, X, curY, yearPK, 0);
-      } else {
-        page.setCharacterSpacing(ks * sy);
-        page.drawText(created, { x: X, y: curY, font: fontReg, size: sy, color: black });
-      }
+      page.drawText(created, { x: X, y: curY, font: fontReg, size: sy, color: black });
     }
-
-    // Återställ teckensärning inför nedre rad
-    page.setCharacterSpacing(0);
 
     // Nedre rad: VG-nummer + logotyp
     const bottomY = cardY + p.bot;
@@ -1797,8 +1574,6 @@ function addFromSearch(rawId) {
     artform:  String(item.artform || '').trim(),
     created:  String(item.created || '').trim(),
     sizeStep:    0,
-    kerning:     0,
-    pairKerning: {},
   });
   renderPages();
   saveSession();
