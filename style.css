@@ -949,6 +949,11 @@ body {
 }
 .btn-ghost:hover { background: rgba(15,23,42,0.05); color: var(--text-primary); }
 
+.btn-install {
+  border: 1px solid var(--border);
+  gap: 5px;
+}
+
 .btn-danger-ghost {
   background: transparent;
   color: var(--danger);
