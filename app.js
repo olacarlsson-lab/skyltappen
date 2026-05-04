@@ -1831,3 +1831,24 @@ async function init() {
 }
 
 init();
+
+// PWA install prompt
+let _installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installPrompt = e;
+  $('btn-install').hidden = false;
+});
+$('btn-install').addEventListener('click', async () => {
+  if (!_installPrompt) return;
+  _installPrompt.prompt();
+  const { outcome } = await _installPrompt.userChoice;
+  if (outcome === 'accepted') {
+    $('btn-install').hidden = true;
+    _installPrompt = null;
+  }
+});
+window.addEventListener('appinstalled', () => {
+  $('btn-install').hidden = true;
+  _installPrompt = null;
+});
