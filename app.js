@@ -88,7 +88,7 @@ function renderMultiline(text, cls) {
 }
 
 // ── Toast notifications ───────────────────────────────────────────────────────
-function showToast(msg, type = 'info') {
+function showToast(msg, type = 'info', duration = 3500) {
   const container = $('toast-container');
   const icons = { info: 'ℹ️', success: '✓', error: '✕' };
 
@@ -103,7 +103,7 @@ function showToast(msg, type = 'info') {
   setTimeout(() => {
     toast.classList.add('toast-out');
     toast.addEventListener('animationend', () => toast.remove(), { once: true });
-  }, 3500);
+  }, duration);
 }
 
 // ── Logo (inbäddad base64 — fungerar oavsett protokoll) ───────────────────────
@@ -1834,30 +1834,25 @@ init();
 
 // PWA install prompt
 let _installPrompt = null;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if (!isStandalone) $('btn-install').hidden = false;
+
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   _installPrompt = e;
-  $('btn-install').hidden = false;
 });
 $('btn-install').addEventListener('click', async () => {
-  if (!_installPrompt) {
-    showToast('Installationsprompt ej tillgänglig – prova att ladda om sidan.', 'error');
-    return;
-  }
-  try {
-    let outcome;
-    const result = await _installPrompt.prompt();
-    outcome = result?.outcome;
-    if (!outcome) {
-      outcome = (await _installPrompt.userChoice).outcome;
+  if (_installPrompt) {
+    try {
+      const result = await _installPrompt.prompt();
+      const outcome = result?.outcome ?? (await _installPrompt.userChoice).outcome;
+      _installPrompt = null;
+      if (outcome === 'accepted') $('btn-install').hidden = true;
+    } catch (err) {
+      console.error('PWA install failed:', err);
     }
-    _installPrompt = null;
-    if (outcome === 'accepted') {
-      $('btn-install').hidden = true;
-    }
-  } catch (err) {
-    console.error('PWA install failed:', err);
-    showToast('Kunde inte starta installation: ' + err.message, 'error');
+  } else {
+    showToast('Installera via Edge: klicka på ··· → Appar → Installera den här webbplatsen som app', 'info', 8000);
   }
 });
 window.addEventListener('appinstalled', () => {
