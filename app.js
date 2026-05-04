@@ -1841,12 +1841,10 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 $('btn-install').addEventListener('click', async () => {
   if (!_installPrompt) return;
-  _installPrompt.prompt();
-  const { outcome } = await _installPrompt.userChoice;
-  if (outcome === 'accepted') {
-    $('btn-install').hidden = true;
-    _installPrompt = null;
-  }
+  const result = await _installPrompt.prompt();
+  const outcome = result?.outcome ?? (await _installPrompt.userChoice?.catch(() => ({}))).outcome;
+  _installPrompt = null;
+  if (outcome === 'accepted') $('btn-install').hidden = true;
 });
 window.addEventListener('appinstalled', () => {
   $('btn-install').hidden = true;
