@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "VGR Konstskylt",
   "short_name": "Konstskylt",
   "description": "Generera Avery C32010-skyltar för VGR-konstverk",
@@ -8,12 +9,6 @@
   "theme_color": "#005b89",
   "lang": "sv",
   "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
     {
       "src": "icons/icon-16x16.png",
       "sizes": "16x16",
@@ -73,7 +68,13 @@
       "src": "icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "icons/icon-256x256.png",
@@ -94,7 +95,29 @@
       "src": "icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/desktop.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "VGR Konstskylt – desktopvy"
+    },
+    {
+      "src": "screenshots/mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "VGR Konstskylt – mobilvy"
     }
   ]
 }
