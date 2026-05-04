@@ -1840,12 +1840,24 @@ window.addEventListener('beforeinstallprompt', e => {
   $('btn-install').hidden = false;
 });
 $('btn-install').addEventListener('click', async () => {
-  if (!_installPrompt) return;
-  _installPrompt.prompt();
-  const { outcome } = await _installPrompt.userChoice;
-  if (outcome === 'accepted') {
-    $('btn-install').hidden = true;
+  if (!_installPrompt) {
+    showToast('Installationsprompt ej tillgänglig – prova att ladda om sidan.', 'error');
+    return;
+  }
+  try {
+    let outcome;
+    const result = await _installPrompt.prompt();
+    outcome = result?.outcome;
+    if (!outcome) {
+      outcome = (await _installPrompt.userChoice).outcome;
+    }
     _installPrompt = null;
+    if (outcome === 'accepted') {
+      $('btn-install').hidden = true;
+    }
+  } catch (err) {
+    console.error('PWA install failed:', err);
+    showToast('Kunde inte starta installation: ' + err.message, 'error');
   }
 });
 window.addEventListener('appinstalled', () => {
