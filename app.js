@@ -1036,7 +1036,6 @@ function loadFile(e) {
         for (const row of rows) {
           for (const cell of row) {
             const str = String(cell).trim();
-            if (/^\d{3,6}$/.test(str)) { push(str); continue; }
             for (const m of str.matchAll(/\bVG[-]?(\d+)\b/gi)) push(m[1]);
           }
         }
