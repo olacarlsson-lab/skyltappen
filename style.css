@@ -1,40 +1,65 @@
-/* ── CSS Variables ─ Modernized for 2026 ─────────────────────────────────────── */
+/* ── CSS Variables ─ VGR designsystem (vgr-base) ─────────────────────────────── */
 :root {
-  --teal:          #005b89;
-  --teal-dark:     #004569;
-  --teal-light:    #e6f2f9;
-  --teal-glow:     rgba(0, 91, 137, 0.25);
+  /* VGR-profilfärger */
+  --vgr-blue:         #005c95;
+  --vgr-blue-dark:    #094e79;
+  --vgr-blue-darkest: #06304a;
+  --vgr-focus:        #fabb00;
+  --vgr-green:        #278900;
 
-  --bg:            #f5f7fa;
+  /* Appens primärfärg = VGR-blå (behåller --teal-namnen för bakåtkompatibilitet) */
+  --teal:          #005c95;
+  --teal-dark:     #094e79;
+  --teal-light:    #e1f3f8;
+  --teal-glow:     rgba(0, 92, 149, 0.22);
+
+  --bg:            #f4f4f4;
   --surface:       #ffffff;
-  --surface-glass: rgba(255, 255, 255, 0.75);
+  --surface-glass: rgba(255, 255, 255, 0.85);
 
-  --text-primary:  #0f172a;
-  --text-body:     #334155;
-  --text-muted:    #64748b;
-  --text-faint:    #94a3b8;
+  --text-primary:  #494746;
+  --text-body:     #494746;
+  --text-muted:    #6b6968;
+  --text-faint:    #8c8b8b;
 
-  --border:        #e2e8f0;
-  --border-focus:  #005b89;
+  --border:        #dddddd;
+  --border-focus:  #005c95;
 
-  --danger:        #ef4444;
-  --danger-bg:     #fef2f2;
-  --danger-glow:   rgba(239, 68, 68, 0.2);
+  --danger:        #c0392b;
+  --danger-bg:     #f9dede;
+  --danger-glow:   rgba(192, 57, 43, 0.18);
 
-  --shadow-sm:     0 2px 4px rgba(15,23,42,0.04), 0 1px 2px rgba(15,23,42,0.02);
-  --shadow-md:     0 8px 16px rgba(15,23,42,0.05), 0 4px 6px rgba(15,23,42,0.03);
-  --shadow-lg:     0 24px 48px rgba(15,23,42,0.08), 0 12px 24px rgba(15,23,42,0.04);
-  --shadow-float:  0 16px 32px rgba(0, 91, 137, 0.12), 0 4px 12px rgba(15,23,42,0.05);
+  /* VGR alert-bakgrunder */
+  --alert-success: #e7f4e4;
+  --alert-warning: #fff1d2;
+  --alert-error:   #f9dede;
+  --alert-info:    #e1f3f8;
 
-  --radius-sm:     8px;
-  --radius-md:     14px;
-  --radius-lg:     20px;
+  --shadow-sm:     0 2px 4px rgba(73,71,70,0.05), 0 1px 2px rgba(73,71,70,0.03);
+  --shadow-md:     0 8px 16px rgba(73,71,70,0.06), 0 4px 6px rgba(73,71,70,0.04);
+  --shadow-lg:     0 24px 48px rgba(73,71,70,0.09), 0 12px 24px rgba(73,71,70,0.05);
+  --shadow-float:  0 16px 32px rgba(0, 92, 149, 0.12), 0 4px 12px rgba(73,71,70,0.06);
+
+  /* Fyrkantiga hörn enligt VGR (knappar 2px) */
+  --radius-sm:     2px;
+  --radius-md:     4px;
+  --radius-lg:     6px;
   --radius-full:   99px;
+
+  /* VGR-typsnitt: serif för brödtext, sans för UI/rubriker */
+  --font-body:     'Times New Roman', Georgia, serif;
+  --font-ui:       Helvetica, Arial, sans-serif;
 
   --sidebar-w:     300px;
   --header-h:      64px;
 
-  --transition:    all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition:    all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Tangentbordsfokus enligt VGR (gul fokusmarkering) */
+:focus-visible {
+  outline: 3px solid var(--vgr-focus);
+  outline-offset: 2px;
 }
 
 /* ── Reset ──────────────────────────────────────────────────────────────────── */
@@ -45,12 +70,11 @@ html, body {
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-family: var(--font-ui);
   font-size: 14px;
   background: var(--bg);
-  background-image: radial-gradient(circle at 100% 0%, rgba(0,91,137,0.04) 0%, transparent 40%),
-                    radial-gradient(circle at 0% 100%, rgba(0,91,137,0.03) 0%, transparent 40%);
+  background-image: radial-gradient(circle at 100% 0%, rgba(0,92,149,0.04) 0%, transparent 40%),
+                    radial-gradient(circle at 0% 100%, rgba(0,92,149,0.03) 0%, transparent 40%);
   color: var(--text-primary);
   display: flex;
   flex-direction: column;
@@ -90,8 +114,8 @@ body {
 .header-logo-mark {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #0076b3, var(--teal));
-  border-radius: 8px;
+  background: var(--vgr-blue);
+  border-radius: var(--radius-sm);
   position: relative;
   flex-shrink: 0;
   box-shadow: 0 4px 12px var(--teal-glow);
@@ -270,7 +294,7 @@ body {
 }
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--teal), #00a1ff);
+  background: var(--vgr-blue);
   width: 0%;
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   border-radius: var(--radius-full);
@@ -286,10 +310,11 @@ body {
   padding-top: 16px;
 }
 .sidebar-hint {
-  font-size: 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
   color: var(--text-faint);
   line-height: 1.6;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .sidebar-hint kbd {
@@ -592,7 +617,7 @@ body {
   font-size: 2.5mm;
   font-weight: 700;
   color: rgba(15,23,42,0.2);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-ui);
   pointer-events: none;
   line-height: 1;
 }
@@ -751,7 +776,7 @@ body {
   height: 32px;
   cursor: pointer;
   color: var(--text-muted);
-  font-family: 'Inter', Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
   font-weight: 700;
   line-height: 1;
   display: flex;
@@ -817,7 +842,7 @@ body {
   height: 32px;
   cursor: pointer;
   color: var(--text-muted);
-  font-family: 'Inter', Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
   font-weight: 700;
   line-height: 1;
   display: flex;
@@ -885,7 +910,7 @@ body {
 .tutorial-steps li:last-child { border-bottom: none; }
 .tutorial-steps li div { display: flex; flex-direction: column; gap: 3px; }
 .tutorial-steps li strong { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.tutorial-steps li p { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0; }
+.tutorial-steps li p { font-family: var(--font-body); font-size: 14px; line-height: 1.5; color: var(--text-muted); margin: 0; }
 .tutorial-step-num {
   flex-shrink: 0;
   width: 26px;
@@ -909,8 +934,8 @@ body {
   gap: 8px;
   padding: 0 20px;
   height: 44px;
-  border-radius: var(--radius-full);
-  font-family: inherit;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -924,14 +949,12 @@ body {
 .btn:disabled { opacity: 0.5; cursor: default; pointer-events: none; transform: scale(1) translateY(0); box-shadow: none; }
 
 .btn-primary {
-  background: linear-gradient(180deg, #0070a8, var(--teal));
+  background: var(--vgr-blue);
   color: white;
   border: none;
-  box-shadow: 0 4px 12px var(--teal-glow), inset 0 1px 1px rgba(255,255,255,0.2);
 }
-.btn-primary:hover { 
-  background: linear-gradient(180deg, #007ebf, #006497);
-  box-shadow: 0 6px 16px var(--teal-glow), inset 0 1px 1px rgba(255,255,255,0.2); 
+.btn-primary:hover {
+  background: var(--vgr-blue-dark);
   transform: translateY(-1px);
 }
 

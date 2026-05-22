@@ -1,7 +1,7 @@
 'use strict';
 
 // Bumpa versionen vid varje deploy för att tvinga cache-rensning
-const CACHE = 'vgr-konstskylt-20260504';
+const CACHE = 'vgr-konstskylt-20260522';
 
 const PRECACHE = [
   '/',
@@ -12,7 +12,6 @@ const PRECACHE = [
   '/manifest.json',
   '/vgr_logo.png',
   '/vgr_logo_cropped.png',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
   'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://unpkg.com/xlsx/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js',
